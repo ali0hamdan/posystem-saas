@@ -1,0 +1,20 @@
+{
+  "name": "stock-managment",
+  "private": true,
+  "description": "Monorepo-style POS + inventory (NestJS API + Vite/React frontend)",
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "build:backend": "npm run build --prefix backend",
+    "build:frontend": "npm run build --prefix frontend",
+    "build:all": "npm run build:backend && npm run build:frontend",
+    "dev:backend": "npm run start:dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:electron": "npm run electron:dev --prefix frontend",
+    "prisma:migrate:deploy": "npm run prisma:migrate:deploy --prefix backend",
+    "prisma:generate": "npm run prisma:generate --prefix backend",
+    "db:seed": "npm run seed --prefix backend"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

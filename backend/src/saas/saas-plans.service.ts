@@ -1,0 +1,114 @@
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { AuditLogService } from '../audit/audit-log.service';
+import type { SaasAdminSafe } from './strategies/saas-jwt.strategy';
+import type { CreateSaasPlanDto } from './dto/create-saas-plan.dto';
+import type { PatchSaasPlanDto } from './dto/patch-saas-plan.dto';
+
+function definedKeys<T extends object>(obj: T): (keyof T)[] {
+  return (Object.keys(obj) as (keyof T)[]).filter((k) => obj[k] !== undefined);
+}
+
+function toDecimalOrNull(v: number | null | undefined): Prisma.Decimal | null | undefined {
+  if (v === undefined) return undefined;
+  if (v === null) return null;
+  return new Prisma.Decimal(v);
+}
+
+@Injectable()
+export class SaasPlansService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditLogService,
+  ) {}
+
+  list() {
+    return this.prisma.plan.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
+
+  listAll() {
+    return this.prisma.plan.findMany({ orderBy: { sortOrder: 'asc' } });
+  }
+
+  async create(admin: SaasAdminSafe, dto: CreateSaasPlanDto) {
+    const existing = await this.prisma.plan.findUnique({ where: { code: dto.code } });
+    if (existing) {
+      throw new ConflictException({
+        message: 'A plan with this code already exists',
+        code: 'SAAS_PLAN_CODE_EXISTS',
+      });
+    }
+    const row = await this.prisma.plan.create({
+      data: {
+        code: dto.code,
+        name: dto.name.trim(),
+        description: dto.description?.trim() ?? null,
+        type: dto.type ?? 'SUBSCRIPTION',
+        monthlyPrice: toDecimalOrNull(dto.monthlyPrice),
+        yearlyPrice: toDecimalOrNull(dto.yearlyPrice),
+        oneTimePrice: toDecimalOrNull(dto.oneTimePrice),
+        currency: dto.currency ?? 'USD',
+        maxUsers: dto.maxUsers,
+        maxBranches: dto.maxBranches,
+        maxDevices: dto.maxDevices,
+        features: (dto.features ?? {}) as Prisma.InputJsonValue,
+        allowsDesktopDownload: dto.allowsDesktopDownload ?? false,
+        isActive: dto.isActive ?? true,
+        sortOrder: dto.sortOrder ?? 0,
+      },
+    });
+    await this.audit.log({
+      userId: null,
+      clientId: null,
+      action: 'saas.plan.create',
+      entity: 'Plan',
+      entityId: row.id,
+      newValue: { code: dto.code, saasAdminId: admin.id },
+    });
+    return row;
+  }
+
+  async patch(admin: SaasAdminSafe, id: string, dto: PatchSaasPlanDto) {
+    const keys = definedKeys(dto);
+    if (keys.length === 0) {
+      throw new BadRequestException({ message: 'No fields to update', code: 'EMPTY_UPDATE' });
+    }
+    const existing = await this.prisma.plan.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException({ message: 'Plan not found', code: 'PLAN_NOT_FOUND' });
+    }
+    const updated = await this.prisma.plan.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+        ...(dto.description !== undefined ? { description: dto.description?.trim() ?? null } : {}),
+        ...(dto.type !== undefined ? { type: dto.type } : {}),
+        ...(dto.monthlyPrice !== undefined ? { monthlyPrice: toDecimalOrNull(dto.monthlyPrice) } : {}),
+        ...(dto.yearlyPrice !== undefined ? { yearlyPrice: toDecimalOrNull(dto.yearlyPrice) } : {}),
+        ...(dto.oneTimePrice !== undefined ? { oneTimePrice: toDecimalOrNull(dto.oneTimePrice) } : {}),
+        ...(dto.currency !== undefined ? { currency: dto.currency } : {}),
+        ...(dto.maxUsers !== undefined ? { maxUsers: dto.maxUsers } : {}),
+        ...(dto.maxBranches !== undefined ? { maxBranches: dto.maxBranches } : {}),
+        ...(dto.maxDevices !== undefined ? { maxDevices: dto.maxDevices } : {}),
+        ...(dto.features !== undefined ? { features: dto.features as Prisma.InputJsonValue } : {}),
+        ...(dto.allowsDesktopDownload !== undefined ? { allowsDesktopDownload: dto.allowsDesktopDownload } : {}),
+        ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+        ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
+      },
+    });
+    await this.audit.log({
+      userId: null,
+      clientId: null,
+      action: 'saas.plan.update',
+      entity: 'Plan',
+      entityId: id,
+      oldValue: { name: existing.name },
+      newValue: { saasAdminId: admin.id, fields: keys },
+    });
+    return updated;
+  }
+}

@@ -1,0 +1,237 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Canvas — page background */
+    --color-canvas: 248 250 252;
+    --color-canvas-raised: 241 245 249;
+
+    /* Surface — card/panel backgrounds */
+    --color-surface: 255 255 255;
+    --color-surface-muted: 248 250 252;
+
+    /* Borders */
+    --color-line: 226 232 240;
+    --color-line-strong: 148 163 184;
+
+    /* Text */
+    --color-ink: 15 23 42;
+    --color-ink-muted: 71 85 105;
+    --color-ink-faint: 148 163 184;
+
+    /* Sidebar-specific (always light in light mode) */
+    --sidebar-bg: 255 255 255;
+    --sidebar-border: 226 232 240;
+  }
+
+  .dark {
+    --color-canvas: 10 15 28;
+    --color-canvas-raised: 15 21 38;
+    --color-surface: 17 25 44;
+    --color-surface-muted: 22 32 54;
+    --color-line: 30 41 66;
+    --color-line-strong: 51 65 100;
+    --color-ink: 241 245 249;
+    --color-ink-muted: 148 163 184;
+    --color-ink-faint: 71 85 105;
+    --sidebar-bg: 13 18 36;
+    --sidebar-border: 30 41 66;
+  }
+
+  /* SaaS admin marker class — no forced dark; follows html.dark like the rest of the app */
+  .saas-theme {
+    /* intentionally empty */
+  }
+
+  html {
+    @apply antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply min-h-screen bg-canvas font-sans text-ink;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Smooth scroll */
+  * {
+    scroll-behavior: smooth;
+  }
+
+  /* Focus ring only for keyboard users */
+  *:focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Glass morphism helper */
+  .glass {
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+  }
+
+  /* Fade-in animation for cards */
+  .fade-in {
+    animation: fadeIn 0.2s ease-out both;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Subtle slide-in for sidebar items */
+  .slide-in {
+    animation: slideIn 0.15s ease-out both;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-4px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+}
+
+/* ----- Receipt print: only #thermal-receipt (58mm / 80mm thermal) ----- */
+@page receipt58 {
+  size: 58mm auto;
+  margin: 0;
+}
+
+@page receipt80 {
+  size: 80mm auto;
+  margin: 0;
+}
+
+@media print {
+  html.receipt-print-mode {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  html.receipt-print-mode body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+  html.receipt-print-mode body * {
+    visibility: hidden;
+  }
+  html.receipt-print-mode #thermal-receipt,
+  html.receipt-print-mode #thermal-receipt * {
+    visibility: visible;
+  }
+  html.receipt-print-mode #thermal-receipt {
+    page: receipt80;
+    position: absolute;
+    left: 0;
+    top: 0;
+    box-sizing: border-box;
+    width: 80mm;
+    max-width: 80mm;
+    margin: 0;
+    padding: 3mm 4mm;
+    background: #fff !important;
+    color: #000 !important;
+    font-family: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', monospace;
+    font-size: 11px;
+    line-height: 1.35;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+  html.receipt-print-mode.receipt-paper-58mm #thermal-receipt {
+    page: receipt58;
+    width: 58mm;
+    max-width: 58mm;
+    padding: 2mm 3mm;
+    font-size: 10px;
+  }
+  html.receipt-print-mode #thermal-receipt table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  html.receipt-print-mode #thermal-receipt th,
+  html.receipt-print-mode #thermal-receipt td {
+    color: #000 !important;
+    background: transparent !important;
+  }
+  html.receipt-print-mode #thermal-receipt .receipt-scan-block img,
+  html.receipt-print-mode #thermal-receipt .receipt-scan-block svg {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+}
+
+/* ----- Product label sheet print (A4 grid) ----- */
+
+/*
+  The print-only portal div is kept off-screen in normal view so that
+  JsBarcode can render into it (it needs a live DOM node). During print
+  the portal is moved to position (0,0) and everything else is hidden.
+*/
+#product-label-print-target {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  html.product-label-print-mode {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Hide the whole React app and every other body child */
+  html.product-label-print-mode body > * {
+    display: none !important;
+  }
+
+  /* Show only the print portal — it is a direct child of <body> */
+  html.product-label-print-mode #product-label-print-target {
+    display: block !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    z-index: 9999 !important;
+    pointer-events: auto !important;
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  html.product-label-print-mode #product-label-print-target .product-label-sheet {
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+  }
+
+  html.product-label-print-mode #product-label-print-target .product-label-cell {
+    border-color: #000 !important;
+    background: #fff !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

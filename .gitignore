@@ -1,0 +1,22 @@
+# Dependencies & build output
+node_modules/
+**/dist/
+**/coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Secrets and local env — keep `.env.example` files committed
+.env
+.env.local
+.env.production
+backend/.env
+frontend/.env

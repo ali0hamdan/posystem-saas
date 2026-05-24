@@ -1,0 +1,871 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  CASHIER
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  MIXED
+  CREDIT
+}
+
+enum SaleStatus {
+  COMPLETED
+  REFUNDED
+  PARTIALLY_REFUNDED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PAID
+  PARTIAL
+  UNPAID
+}
+
+enum StockMovementType {
+  SALE
+  RETURN
+  PURCHASE
+  ADJUSTMENT
+  DAMAGE
+  EXPIRED
+}
+
+enum PurchaseStatus {
+  DRAFT
+  ORDERED
+  RECEIVED
+  CANCELLED
+}
+
+enum ShiftStatus {
+  OPEN
+  CLOSED
+}
+
+enum StockTransferStatus {
+  DRAFT
+  SENT
+  RECEIVED
+  CANCELLED
+}
+
+enum CustomerLedgerType {
+  SALE_CREDIT
+  PAYMENT
+  ADJUSTMENT
+  REFUND
+}
+
+enum ReceiptPaperSize {
+  MM58
+  MM80
+}
+
+/// Billing / license tier codes (stored on `Plan` and legacy JWT `plan` claim).
+enum LicensePlan {
+  STARTER
+  BUSINESS
+  PRO
+  ENTERPRISE
+  LIFETIME_DESKTOP
+}
+
+/// Whether a plan is billed on a recurring or one-time basis.
+enum PlanType {
+  SUBSCRIPTION
+  ONE_TIME
+}
+
+enum ClientStatus {
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+  PENDING_PAYMENT
+
+  @@map("LicenseClientStatus")
+}
+
+enum SubscriptionStatus {
+  PENDING_PAYMENT
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  EXPIRED
+  SUSPENDED
+  CANCELLED
+  LIFETIME
+
+  @@map("LicenseRecordStatus")
+}
+
+/// Billing cycle for subscriptions and payment records.
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+  LIFETIME
+}
+
+/// Status of a SaaS payment record.
+enum PaymentRecordStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum ActivationCodeStatus {
+  UNUSED
+  USED
+  EXPIRED
+  REVOKED
+}
+
+/// Platform dashboard roles (separate from store `UserRole`).
+enum SaasAdminRole {
+  SUPER_ADMIN
+  SUPPORT
+  BILLING
+}
+
+enum CouponType {
+  PERCENTAGE
+  FIXED
+}
+
+// ---------------------------------------------------------------------------
+// SaaS & tenancy
+// ---------------------------------------------------------------------------
+
+model Plan {
+  id                    String      @id @default(uuid())
+  code                  LicensePlan @unique
+  name                  String
+  description           String?
+  type                  PlanType    @default(SUBSCRIPTION)
+  monthlyPrice          Decimal?    @db.Decimal(10, 2)
+  yearlyPrice           Decimal?    @db.Decimal(10, 2)
+  oneTimePrice          Decimal?    @db.Decimal(10, 2)
+  currency              String      @default("USD")
+  maxUsers              Int         @default(5)
+  maxBranches           Int         @default(1)
+  maxDevices            Int         @default(3)
+  features              Json        @default("{}")
+  allowsDesktopDownload Boolean     @default(false)
+  isActive              Boolean     @default(true)
+  sortOrder             Int         @default(0)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  subscriptions   Subscription[]
+  activationCodes ActivationCode[]
+  paymentRecords  PaymentRecord[]
+}
+
+/// Tenant / store organization (maps to legacy `LicenseClient` table).
+model Client {
+  id            String       @id @default(uuid())
+  slug          String       @unique
+  businessName  String
+  ownerName     String
+  email         String
+  phone         String?
+  status        ClientStatus @default(ACTIVE)
+  notes         String?      @db.Text
+  supportNotes  String?      @db.Text
+  deletedAt     DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  users             User[]
+  branches          Branch[]
+  categories        Category[]
+  suppliers         Supplier[]
+  products          Product[]
+  customers         Customer[]
+  sales             Sale[]
+  stockMovements    StockMovement[]
+  purchaseOrders    PurchaseOrder[]
+  refunds           Refund[]
+  shifts            Shift[]
+  expenses          Expense[]
+  stockTransfers    StockTransfer[]
+  auditLogs         AuditLog[]
+  customerLedgers   CustomerLedger[]
+  storeSettings     StoreSettings?
+  subscriptions     Subscription[]
+  devices           Device[]
+  activationCodes   ActivationCode[]
+  coupons           Coupon[]
+  paymentRecords    PaymentRecord[]
+
+  @@map("LicenseClient")
+}
+
+/// Active subscription for a tenant (maps to legacy `License` table).
+model Subscription {
+  id                     String             @id @default(uuid())
+  clientId               String
+  planId                 String
+  billingCycle           BillingCycle?
+  status                 SubscriptionStatus @default(ACTIVE)
+  startsAt               DateTime
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  expiresAt              DateTime?
+  graceEndsAt            DateTime?
+  cancelledAt            DateTime?
+  paymentProvider        String?
+  externalSubscriptionId String?
+  maxUsers               Int                @default(5)
+  maxBranches            Int                @default(1)
+  maxDevices             Int                @default(3)
+  graceDays              Int                @default(7)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  client         Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  plan           Plan            @relation(fields: [planId], references: [id], onDelete: Restrict)
+  devices        Device[]
+  paymentRecords PaymentRecord[]
+
+  @@index([clientId])
+  @@index([status])
+  @@map("License")
+}
+
+/// SaaS billing payment record — one row per charge attempt.
+model PaymentRecord {
+  id                 String              @id @default(uuid())
+  clientId           String
+  subscriptionId     String?
+  planId             String
+  amount             Decimal             @db.Decimal(10, 2)
+  currency           String              @default("USD")
+  billingCycle       BillingCycle
+  status             PaymentRecordStatus @default(PENDING)
+  paymentProvider    String              @default("manual")
+  externalPaymentId  String?
+  checkoutUrl        String?
+  paidAt             DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  client       Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  plan         Plan          @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([clientId])
+  @@index([subscriptionId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+/// Registered POS device (maps to legacy `LicenseDevice` table).
+model Device {
+  id             String    @id @default(uuid())
+  clientId       String
+  subscriptionId String    @map("licenseId")
+  deviceId       String
+  deviceName     String?
+  platform       String?
+  lastSeenAt     DateTime?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+
+  client       Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, deviceId])
+  @@index([subscriptionId])
+  @@map("LicenseDevice")
+}
+
+/// Activation codes for subscriptions / devices (maps to `LicenseActivationCode`).
+model ActivationCode {
+  id                    String               @id @default(uuid())
+  clientId              String?
+  planId                String
+  lookupHash            String               @unique
+  maxBranches           Int
+  maxDevices            Int
+  graceDays             Int
+  termDays              Int
+  maxUses               Int                  @default(1)
+  usedCount             Int                  @default(0)
+  validUntil            DateTime
+  status                ActivationCodeStatus @default(UNUSED)
+  revokedAt             DateTime?
+  revokedBySaaSAdminId String?
+  label                 String?
+  createdByUserId       String?
+  createdBySaaSAdminId  String?
+  createdAt             DateTime             @default(now())
+
+  client               Client?    @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  plan                 Plan       @relation(fields: [planId], references: [id], onDelete: Restrict)
+  createdBySaaSAdmin   SaaSAdmin? @relation("ActivationCodeCreatedBy", fields: [createdBySaaSAdminId], references: [id], onDelete: SetNull)
+  revokedBySaaSAdmin   SaaSAdmin? @relation("ActivationCodeRevokedBy", fields: [revokedBySaaSAdminId], references: [id], onDelete: SetNull)
+
+  @@index([clientId])
+  @@index([validUntil])
+  @@index([status])
+  @@map("LicenseActivationCode")
+}
+
+/// Platform operator accounts — separate from store `User` (JWT uses different secret).
+model SaaSAdmin {
+  id              String        @id @default(uuid())
+  email           String        @unique
+  passwordHash    String
+  name            String
+  role            SaasAdminRole @default(SUPER_ADMIN)
+  isActive        Boolean       @default(true)
+  loginAttempts   Int           @default(0)
+  lockedUntil     DateTime?
+  totpSecret      String?
+  totpEnabled     Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  activationCodesCreated ActivationCode[] @relation("ActivationCodeCreatedBy")
+  activationCodesRevoked ActivationCode[] @relation("ActivationCodeRevokedBy")
+}
+
+// ---------------------------------------------------------------------------
+// Core POS (tenant-scoped)
+// ---------------------------------------------------------------------------
+
+model Branch {
+  id        String   @id @default(uuid())
+  clientId  String
+  name      String
+  code      String
+  address   String?
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client         Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userBranches   UserBranch[]
+  branchStocks   BranchStock[]
+  sales          Sale[]
+  stockMovements StockMovement[]
+  shifts         Shift[]
+  purchaseOrders PurchaseOrder[]
+  transfersFrom  StockTransfer[] @relation("TransferFromBranch")
+  transfersTo    StockTransfer[] @relation("TransferToBranch")
+
+  @@unique([clientId, code])
+  @@index([clientId])
+  @@index([isActive])
+  @@index([name])
+}
+
+model UserBranch {
+  userId   String
+  branchId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@id([userId, branchId])
+  @@index([branchId])
+}
+
+model BranchStock {
+  branchId  String
+  productId String
+  quantity  Int @default(0)
+  minStock  Int @default(0)
+
+  branch  Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([branchId, productId])
+  @@index([productId])
+}
+
+model User {
+  id               String    @id @default(uuid())
+  clientId         String
+  name             String
+  username         String
+  email            String?
+  passwordHash     String
+  role             UserRole
+  isActive         Boolean   @default(true)
+  loginAttempts    Int       @default(0)
+  lockedUntil      DateTime?
+  refreshTokenHash String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  client                Client           @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  branchLinks           UserBranch[]
+  salesAsCashier        Sale[]           @relation("SaleCashier")
+  stockMovements        StockMovement[]  @relation("StockMovementCreatedBy")
+  expensesCreated       Expense[]        @relation("ExpenseCreatedBy")
+  refunds               Refund[]
+  shifts                Shift[]          @relation("ShiftCashier")
+  auditLogs             AuditLog[]
+  stockTransfers        StockTransfer[]
+  customerLedgerEntries CustomerLedger[]
+
+  @@unique([clientId, username])
+  @@index([clientId])
+  @@index([clientId, email])
+  @@index([role])
+  @@index([isActive])
+}
+
+model Category {
+  id          String  @id @default(uuid())
+  clientId    String
+  name        String
+  description String?
+  isActive    Boolean @default(true)
+
+  client   Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  @@index([clientId])
+  @@index([isActive])
+  @@index([name])
+}
+
+model Supplier {
+  id       String  @id @default(uuid())
+  clientId String
+  name     String
+  phone    String?
+  email    String?
+  address  String?
+  isActive Boolean @default(true)
+
+  client         Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  products       Product[]
+  purchaseOrders PurchaseOrder[]
+
+  @@index([clientId])
+  @@index([isActive])
+  @@index([name])
+}
+
+model Product {
+  id           String    @id @default(uuid())
+  clientId     String
+  name         String
+  barcode      String?
+  sku          String?
+  categoryId   String
+  supplierId   String?
+  costPrice    Decimal   @db.Decimal(14, 2)
+  sellingPrice Decimal   @db.Decimal(14, 2)
+  unitType     String
+  imageUrl     String?
+  expiryDate   DateTime?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  client              Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  category            Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  supplier            Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  branchStocks        BranchStock[]
+  saleItems           SaleItem[]
+  stockMovements      StockMovement[]
+  purchaseOrderItems  PurchaseOrderItem[]
+  stockTransferItems  StockTransferItem[]
+
+  @@unique([clientId, barcode])
+  @@unique([clientId, sku])
+  @@index([clientId])
+  @@index([categoryId])
+  @@index([supplierId])
+  @@index([isActive])
+  @@index([name])
+  @@index([isActive, categoryId])
+  @@index([expiryDate])
+}
+
+model Customer {
+  id            String   @id @default(uuid())
+  clientId      String
+  name          String
+  phone         String?
+  balance       Decimal  @default(0) @db.Decimal(14, 2)
+  loyaltyPoints Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  client Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  sales  Sale[]
+  ledger CustomerLedger[]
+
+  @@index([clientId])
+  @@index([name])
+  @@index([phone])
+}
+
+model CustomerLedger {
+  id             String             @id @default(uuid())
+  clientId       String
+  customerId     String
+  type           CustomerLedgerType
+  amount         Decimal            @db.Decimal(14, 2)
+  balanceAfter   Decimal            @db.Decimal(14, 2)
+  referenceType  String?            @db.VarChar(64)
+  referenceId    String?            @db.VarChar(64)
+  note           String?            @db.Text
+  receiptNumber  String?            @unique @db.VarChar(64)
+  createdById    String
+  createdAt      DateTime           @default(now())
+
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  customer  Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdBy User     @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([clientId])
+  @@index([customerId, createdAt])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model Sale {
+  id              String        @id @default(uuid())
+  clientId        String
+  invoiceNumber   String
+  branchId        String
+  cashierId       String
+  customerId      String?
+  shiftId         String?
+  couponId        String?
+  couponCode      String?       @db.VarChar(64)
+  couponDiscount  Decimal       @default(0) @db.Decimal(14, 2)
+  subtotal        Decimal       @db.Decimal(14, 2)
+  discountTotal   Decimal       @default(0) @db.Decimal(14, 2)
+  taxTotal        Decimal       @default(0) @db.Decimal(14, 2)
+  total           Decimal       @db.Decimal(14, 2)
+  paymentStatus   PaymentStatus
+  status          SaleStatus
+  createdAt       DateTime      @default(now())
+
+  client   Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  branch   Branch    @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  cashier  User      @relation("SaleCashier", fields: [cashierId], references: [id], onDelete: Restrict)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  shift    Shift?    @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  coupon   Coupon?   @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  items    SaleItem[]
+  payments Payment[]
+  refunds  Refund[]
+
+  @@unique([clientId, invoiceNumber])
+  @@index([clientId])
+  @@index([branchId])
+  @@index([cashierId])
+  @@index([customerId])
+  @@index([shiftId])
+  @@index([createdAt])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([cashierId, createdAt])
+  @@index([createdAt, status])
+  @@index([branchId, createdAt])
+}
+
+model SaleItem {
+  id                String  @id @default(uuid())
+  saleId            String
+  productId         String
+  quantity          Int
+  unitPrice         Decimal @db.Decimal(14, 2)
+  discount          Decimal @default(0) @db.Decimal(14, 2)
+  total             Decimal @db.Decimal(14, 2)
+  costPriceAtSale   Decimal @default(0) @db.Decimal(14, 2)
+
+  sale        Sale         @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product     Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
+  refundItems RefundItem[]
+
+  @@index([saleId])
+  @@index([productId])
+}
+
+model Payment {
+  id        String          @id @default(uuid())
+  saleId    String
+  method    PaymentMethod
+  amount    Decimal         @db.Decimal(14, 2)
+  createdAt DateTime        @default(now())
+
+  sale Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  @@index([saleId])
+  @@index([createdAt])
+}
+
+model StockMovement {
+  id               String              @id @default(uuid())
+  clientId         String
+  branchId         String
+  productId        String
+  type             StockMovementType
+  quantityChange   Int
+  previousQuantity Int
+  newQuantity      Int
+  reason           String?
+  referenceType    String?
+  referenceId      String?
+  createdById      String
+  createdAt        DateTime            @default(now())
+
+  client    Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  branch    Branch  @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  createdBy User    @relation("StockMovementCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([clientId])
+  @@index([branchId])
+  @@index([productId])
+  @@index([createdById])
+  @@index([createdAt])
+  @@index([type])
+  @@index([referenceType, referenceId])
+}
+
+model StockTransfer {
+  id           String              @id @default(uuid())
+  clientId     String
+  fromBranchId String
+  toBranchId   String
+  status       StockTransferStatus @default(DRAFT)
+  note         String?
+  createdById  String
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  receivedAt   DateTime?
+
+  client     Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  fromBranch Branch              @relation("TransferFromBranch", fields: [fromBranchId], references: [id], onDelete: Restrict)
+  toBranch   Branch              @relation("TransferToBranch", fields: [toBranchId], references: [id], onDelete: Restrict)
+  createdBy  User                @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  items      StockTransferItem[]
+
+  @@index([clientId])
+  @@index([fromBranchId])
+  @@index([toBranchId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model StockTransferItem {
+  id              String @id @default(uuid())
+  stockTransferId String
+  productId       String
+  quantity        Int
+
+  stockTransfer StockTransfer @relation(fields: [stockTransferId], references: [id], onDelete: Cascade)
+  product       Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([stockTransferId])
+  @@index([productId])
+}
+
+model PurchaseOrder {
+  id          String          @id @default(uuid())
+  clientId    String
+  branchId    String
+  supplierId  String
+  status      PurchaseStatus
+  total       Decimal         @db.Decimal(14, 2)
+  paidAmount  Decimal         @default(0) @db.Decimal(14, 2)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  client   Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  branch   Branch              @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  supplier Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  items    PurchaseOrderItem[]
+
+  @@index([clientId])
+  @@index([branchId])
+  @@index([supplierId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model PurchaseOrderItem {
+  id              String  @id @default(uuid())
+  purchaseOrderId String
+  productId       String
+  quantity        Int
+  costPrice       Decimal @db.Decimal(14, 2)
+  total           Decimal @db.Decimal(14, 2)
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product       Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([purchaseOrderId])
+  @@index([productId])
+}
+
+model Refund {
+  id            String   @id @default(uuid())
+  clientId      String
+  saleId        String
+  userId        String
+  reason        String
+  totalRefunded Decimal  @db.Decimal(14, 2)
+  createdAt     DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  sale   Sale   @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items  RefundItem[]
+
+  @@index([clientId])
+  @@index([saleId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model RefundItem {
+  id         String  @id @default(uuid())
+  refundId   String
+  saleItemId String
+  quantity   Int
+  amount     Decimal @db.Decimal(14, 2)
+
+  refund   Refund   @relation(fields: [refundId], references: [id], onDelete: Cascade)
+  saleItem SaleItem @relation(fields: [saleItemId], references: [id], onDelete: Restrict)
+
+  @@index([refundId])
+  @@index([saleItemId])
+}
+
+model Shift {
+  id            String      @id @default(uuid())
+  clientId      String
+  branchId      String
+  cashierId     String
+  openingCash   Decimal     @db.Decimal(14, 2)
+  closingCash   Decimal?    @db.Decimal(14, 2)
+  expectedCash  Decimal?    @db.Decimal(14, 2)
+  difference    Decimal?    @db.Decimal(14, 2)
+  status        ShiftStatus
+  openedAt      DateTime    @default(now())
+  closedAt      DateTime?
+
+  client   Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  branch   Branch    @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  cashier  User      @relation("ShiftCashier", fields: [cashierId], references: [id], onDelete: Restrict)
+  sales    Sale[]
+  expenses Expense[]
+
+  @@index([clientId])
+  @@index([branchId])
+  @@index([cashierId])
+  @@index([status])
+  @@index([openedAt])
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  clientId    String
+  title       String
+  amount      Decimal  @db.Decimal(14, 2)
+  note        String?
+  createdById String
+  shiftId     String?
+  createdAt   DateTime @default(now())
+
+  client    Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdBy User   @relation("ExpenseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  shift     Shift? @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+
+  @@index([clientId])
+  @@index([createdById])
+  @@index([createdAt])
+  @@index([shiftId])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  clientId  String?
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  oldValue  Json?
+  newValue  Json?
+  createdAt DateTime @default(now())
+
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([clientId])
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@index([action])
+}
+
+model Coupon {
+  id             String     @id @default(uuid())
+  clientId       String
+  code           String     @db.VarChar(64)
+  type           CouponType
+  value          Decimal    @db.Decimal(14, 2)
+  minOrderAmount Decimal?   @db.Decimal(14, 2)
+  maxUses        Int?
+  usedCount      Int        @default(0)
+  expiresAt      DateTime?
+  isActive       Boolean    @default(true)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  sales  Sale[]
+
+  @@unique([clientId, code])
+  @@index([clientId])
+  @@index([isActive])
+  @@index([expiresAt])
+}
+
+model StoreSettings {
+  clientId           String           @id
+  storeName          String           @default("Stock POS")
+  storePhone         String?
+  storeAddress       String?
+  receiptFooter      String?
+  taxEnabled         Boolean          @default(false)
+  taxRate            Decimal          @default(0) @db.Decimal(8, 4)
+  currency           String           @default("USD")
+  lowStockDefault    Int              @default(5)
+  receiptLogo        String?
+  receiptPaperSize   ReceiptPaperSize @default(MM80)
+  receiptAutoPrint   Boolean          @default(false)
+  receiptCopies      Int              @default(1)
+  receiptShowLogo    Boolean          @default(true)
+  receiptPrinterName String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
