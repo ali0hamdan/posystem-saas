@@ -25,12 +25,12 @@ export class LicenseGuard implements CanActivate {
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    if (this.validation.isBypassed()) {
-      return true;
-    }
     const req = context.switchToHttp().getRequest<Request & { licenseContext?: LicenseRequestContext }>();
     const path = (req.path || req.url?.split('?')[0] || '').split('?')[0];
     if (this.isPublicPath(path)) {
+      return true;
+    }
+    if (this.validation.isBypassed()) {
       return true;
     }
 
