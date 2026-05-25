@@ -718,8 +718,8 @@ function StatItem({ value, suffix, label, dark }: { value: number; suffix: strin
   const inView = useInView(ref, { once: true });
   const count = useCountUp(value, 2200, inView);
   return (
-    <div ref={ref} className="text-center">
-      <div className="text-5xl md:text-6xl font-black tracking-tight bg-gradient-to-br from-primary-400 via-purple-400 to-pink-400 bg-clip-text text-transparent tabular-nums">
+    <div ref={ref} className="text-center min-w-0">
+      <div className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight bg-gradient-to-br from-primary-400 via-purple-400 to-pink-400 bg-clip-text text-transparent tabular-nums whitespace-nowrap">
         {count.toLocaleString()}{suffix}
       </div>
       <div className={`text-sm mt-3 font-medium ${dark ? 'text-white/40' : 'text-ink-muted'}`}>{label}</div>
@@ -1031,12 +1031,12 @@ function StatsSection() {
         style={{ backgroundImage: `radial-gradient(${dark ? '#6366f1' : '#c7d2fe'} 1px, transparent 1px)`, backgroundSize: '30px 30px' }} />
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary-500/5 to-transparent" />
 
-      {/* 3D isometric bar chart */}
-      <div className="absolute inset-0 opacity-40 pointer-events-none">
+      {/* 3D isometric bar chart — kept behind stats with explicit z-index */}
+      <div className="absolute inset-0 opacity-40 pointer-events-none z-0">
         <IsoBarChart dark={dark} triggered={inView} />
       </div>
 
-      <div ref={ref} className="relative max-w-5xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-12">
+      <div ref={ref} className="relative z-10 max-w-5xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-10 sm:gap-12">
         <StatItem value={2400} suffix="+" label="Active businesses" dark={dark} />
         <StatItem value={1200000} suffix="+" label="Transactions processed" dark={dark} />
         <StatItem value={18} suffix="" label="Countries" dark={dark} />
