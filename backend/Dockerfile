@@ -11,8 +11,10 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+# Prisma query and migration engines require OpenSSL on Alpine
+RUN apk add --no-cache openssl
 COPY package*.json .npmrc ./
-# --ignore-scripts is safe here — bcrypt binding is copied from builder
+# --ignore-scripts is safe — bcrypt and Prisma engine binaries are copied from builder
 RUN npm ci --omit=dev --ignore-scripts
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
@@ -21,7 +23,10 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/bcrypt ./node_modules/bcrypt
 COPY prisma ./prisma
 
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# Create non-root user and fix ownership of all app files before switching
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup \
+    && chown -R appuser:appgroup /app
+
 USER appuser
 
 EXPOSE 3000
