@@ -1,5 +1,5 @@
 ﻿import { useEffect, useRef, useState, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, useInView, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import {
   BarChart3, ShoppingCart, Package, Users, TrendingUp, Zap,
@@ -1134,8 +1134,20 @@ function Footer() {
 }
 
 export function LandingPage() {
+  const location = useLocation();
+  const fromAuth = Boolean((location.state as { fromAuth?: boolean } | null)?.fromAuth);
+
   return (
     <div className="font-sans antialiased overflow-x-hidden">
+      {fromAuth && (
+        <motion.div
+          className="fixed inset-0 z-[9999] pointer-events-none"
+          style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)' }}
+          initial={{ x: 0 }}
+          animate={{ x: '100%' }}
+          transition={{ duration: 0.5, delay: 0.05, ease: [0.76, 0, 0.24, 1] }}
+        />
+      )}
       <Navbar />
       <HeroSection />
       <LogosSection />

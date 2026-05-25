@@ -138,6 +138,12 @@ export function GetStartedPage() {
     setTimeout(() => navigate('/login', { state: { fromLanding: true } }), 550);
   }
 
+  function handleHomeRedirect() {
+    if (leaving) return;
+    setLeaving(true);
+    setTimeout(() => navigate('/', { state: { fromAuth: true } }), 550);
+  }
+
   // Step 1
   const [form, setForm] = useState<BusinessForm>({ businessName: '', ownerName: '', email: '', password: '', phone: '' });
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof BusinessForm, string>>>({});
@@ -310,9 +316,9 @@ export function GetStartedPage() {
                   <p>Already have an account?{' '}
                     <button onClick={handleLoginRedirect} className="text-primary-600 hover:underline font-medium">Login</button>
                   </p>
-                  <Link to="/" className="flex items-center gap-1 hover:text-ink-muted transition-colors">
+                  <button onClick={handleHomeRedirect} className="flex items-center gap-1 hover:text-ink-muted transition-colors">
                     <Home className="h-3 w-3" /> Back to home
-                  </Link>
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -430,11 +436,11 @@ export function GetStartedPage() {
                     <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
                     Edit my details
                   </button>
-                  <Link to="/"
+                  <button onClick={handleHomeRedirect}
                     className="flex items-center gap-2 text-sm font-medium text-ink-muted hover:text-ink transition-colors group">
                     <Home className="h-4 w-4" />
                     Back to home page
-                  </Link>
+                  </button>
                 </div>
               </div>
             </motion.div>

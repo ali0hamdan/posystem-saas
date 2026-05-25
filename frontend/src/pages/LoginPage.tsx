@@ -57,10 +57,10 @@ export function LoginPage() {
   const target = safePostLoginPath(from);
   const [leaving, setLeaving] = useState(false);
 
-  const goWithCurtain = useCallback((path: string) => {
+  const goWithCurtain = useCallback((path: string, state?: Record<string, unknown>) => {
     if (leaving) return;
     setLeaving(true);
-    setTimeout(() => navigate(path, { state: { fromLanding: true } }), 550);
+    setTimeout(() => navigate(path, { state: state ?? { fromLanding: true } }), 550);
   }, [leaving, navigate]);
 
   useEffect(() => {
@@ -339,7 +339,7 @@ export function LoginPage() {
                 </button>
               </p>
               <button
-                onClick={() => goWithCurtain('/')}
+                onClick={() => goWithCurtain('/', { fromAuth: true })}
                 className="flex items-center gap-1 hover:text-ink-muted transition-colors"
               >
                 <Home className="h-3 w-3" /> Back to home
