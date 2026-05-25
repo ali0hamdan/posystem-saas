@@ -4,8 +4,10 @@ ARG VITE_API_URL
 ARG VITE_BYPASS_LICENSE=false
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_BYPASS_LICENSE=$VITE_BYPASS_LICENSE
+# Skip Electron binary download — not needed for the web build
+ENV ELECTRON_SKIP_BINARY_DOWNLOAD=1
 COPY package*.json ./
-RUN npm ci --ignore-scripts
+RUN npm ci --legacy-peer-deps --ignore-scripts
 COPY . .
 RUN npm run build
 
