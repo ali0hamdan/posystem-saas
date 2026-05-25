@@ -3,7 +3,7 @@
  * Financial figures should come from API responses already computed with sale-time COGS.
  */
 
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -35,12 +35,24 @@ export function flattenRow(obj: unknown, prefix = ''): Record<string, string | n
   return out;
 }
 
-export function exportJsonToExcel(filename: string, sheetName: string, rows: Record<string, unknown>[]) {
+export async function exportJsonToExcel(filename: string, sheetName: string, rows: Record<string, unknown>[]) {
   const flat = rows.map((r) => flattenRow(r));
-  const ws = XLSX.utils.json_to_sheet(flat.length ? flat : [{ note: 'No rows' }]);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sheetName.slice(0, 31));
-  XLSX.writeFile(wb, filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`);
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet(sheetName.slice(0, 31));
+
+  const data = flat.length ? flat : [{ note: 'No rows' }];
+  const headers = Object.keys(data[0]);
+  ws.addRow(headers);
+  for (const row of data) ws.addRow(headers.map((h) => row[h] ?? ''));
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export function exportTableToPdf(

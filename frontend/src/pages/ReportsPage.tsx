@@ -499,12 +499,12 @@ export function ReportsPage() {
     [canSeeFinancial, role],
   );
 
-  const onExportExcel = useCallback(() => {
+  const onExportExcel = useCallback(async () => {
     if (!reportQuery.data || selected === 'hub') return;
     const rows = extractRows(reportQuery.data);
     const cols = reportColumns(selected as Exclude<ReportId, 'hub'>);
     if (cols && rows.length) {
-      exportJsonToExcel(
+      await exportJsonToExcel(
         `${selected}-${filters.fromDate}-${filters.toDate}`,
         selected,
         rows.map((r) => {
@@ -514,7 +514,7 @@ export function ReportsPage() {
         }),
       );
     } else {
-      exportJsonToExcel(`${selected}-${filters.fromDate}`, selected, rows.length ? rows : [{ payload: reportQuery.data }]);
+      await exportJsonToExcel(`${selected}-${filters.fromDate}`, selected, rows.length ? rows : [{ payload: reportQuery.data }]);
     }
     toast.success('Excel file downloaded');
   }, [reportQuery.data, selected, filters.fromDate, filters.toDate]);
