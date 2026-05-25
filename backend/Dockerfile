@@ -30,4 +30,4 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup \
 USER appuser
 
 EXPOSE 3000
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/main"]
+CMD ["/bin/sh", "-c", "i=0; until node_modules/.bin/prisma migrate deploy; do i=$((i+1)); if [ $i -ge 5 ]; then echo 'Migrations failed after 5 attempts'; exit 1; fi; echo \"Migration attempt $i failed, retrying in 15s...\"; sleep 15; done && exec node dist/main"]
