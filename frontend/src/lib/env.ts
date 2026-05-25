@@ -22,6 +22,15 @@ export const CASHIER_CAN_VIEW_STOCK_MOVEMENTS =
 
 const rawBypass = import.meta.env.VITE_BYPASS_LICENSE as string | undefined;
 
-/** When `VITE_BYPASS_LICENSE` is true/1/yes, the POS skips license activation and UI locks (for local development). */
+// License key activation only applies to the Electron desktop app.
+// In any web browser context (SaaS deployment) the check is bypassed by default
+// unless VITE_BYPASS_LICENSE is explicitly set to 'false' or '0'.
+const isElectron = typeof navigator !== 'undefined' && navigator.userAgent.includes('Electron');
+
+/** True in web browser (SaaS) by default; true in Electron only when VITE_BYPASS_LICENSE=true/1/yes. */
 export const BYPASS_LICENSE =
-  rawBypass === 'true' || rawBypass === '1' || String(rawBypass ?? '').toLowerCase() === 'yes';
+  rawBypass === 'false' || rawBypass === '0'
+    ? false
+    : rawBypass === 'true' || rawBypass === '1' || String(rawBypass ?? '').toLowerCase() === 'yes'
+    ? true
+    : !isElectron;
