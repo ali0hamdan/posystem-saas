@@ -6,6 +6,8 @@ COPY package*.json .npmrc ./
 RUN npm ci
 COPY . .
 RUN node_modules/.bin/prisma generate
+# Remove stale tsbuildinfo so TypeScript always does a full emit in Docker
+RUN rm -f tsconfig.build.tsbuildinfo tsconfig.tsbuildinfo
 RUN npm run build
 
 FROM node:20-alpine AS runner
