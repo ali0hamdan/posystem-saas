@@ -5,7 +5,7 @@ RUN apk add --no-cache python3 make g++
 COPY package*.json .npmrc ./
 RUN npm ci
 COPY . .
-RUN npx prisma generate
+RUN node_modules/.bin/prisma generate
 RUN npm run build
 
 FROM node:20-alpine AS runner
@@ -25,4 +25,4 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
 
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/main"]
