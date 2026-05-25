@@ -6,9 +6,11 @@ COPY package*.json .npmrc ./
 RUN npm ci
 COPY . .
 RUN node_modules/.bin/prisma generate
-# Remove stale tsbuildinfo so TypeScript always does a full emit in Docker
-RUN rm -f tsconfig.build.tsbuildinfo tsconfig.tsbuildinfo
-RUN npm run build
+# Bust the Docker layer cache on every new Railway deployment
+ARG RAILWAY_GIT_COMMIT_SHA=dev
+RUN echo "Building commit ${RAILWAY_GIT_COMMIT_SHA}" && \
+    rm -f tsconfig.build.tsbuildinfo tsconfig.tsbuildinfo && \
+    npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
