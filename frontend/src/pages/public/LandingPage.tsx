@@ -191,7 +191,7 @@ function drawSaleCard(ctx: CanvasRenderingContext2D, s: Sprite, dark: boolean) {
   ctx.restore();
 }
 
-function drawCreditCard(ctx: CanvasRenderingContext2D, s: Sprite, dark: boolean) {
+function drawCreditCard(ctx: CanvasRenderingContext2D, s: Sprite, _dark: boolean) {
   const w = 86, h = 54;
   ctx.save();
   ctx.translate(s.x, s.y); ctx.rotate(s.rot); ctx.scale(s.scale, s.scale);
@@ -229,7 +229,7 @@ function drawCreditCard(ctx: CanvasRenderingContext2D, s: Sprite, dark: boolean)
   ctx.restore();
 }
 
-function drawProductBox(ctx: CanvasRenderingContext2D, s: Sprite, dark: boolean) {
+function drawProductBox(ctx: CanvasRenderingContext2D, s: Sprite, _dark: boolean) {
   const sz = 38;
   const { color } = s.data as { color: string };
   ctx.save();
@@ -503,7 +503,6 @@ function IsoBarChart({ dark, triggered }: { dark: boolean; triggered: boolean })
       }
 
       bars.forEach((bar, i) => {
-        const bh = bar.value * maxH * progress.current;
         const ease = 1 - Math.pow(1 - Math.min(progress.current, 1), 3);
         const actualH = bar.value * maxH * ease;
         const bx = cx - (bars.length / 2 - i) * gap + gap / 2;
