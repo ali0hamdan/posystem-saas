@@ -9,16 +9,41 @@ import { JwtService } from '@nestjs/jwt';
 import { compare, hash } from 'bcrypt';
 import { toDataURL } from 'qrcode';
 
+// `speakeasy` is pure CommonJS (no ESM-only transitive deps). It replaced
+// `otplib` here because otplib v13 transitively pulls @scure/base@^2 and
+// @noble/hashes@^2 — both ESM-only — which crashes the packaged desktop
+// backend (`require()` of ES Module) at module load before /health is up.
+// See frontend/electron/DESKTOP_PACKAGING.md for the full incident notes.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { TOTP } = require('otplib') as {
-  TOTP: new () => {
-    generateSecret: (length?: number) => string;
-    generate: (secret: string) => string;
-    verify: (opts: { token: string; secret: string }) => boolean;
-    toURI: (account: string, service: string, secret: string) => string;
+const speakeasy = require('speakeasy') as {
+  generateSecret: (opts?: { length?: number }) => { base32: string };
+  totp: {
+    (opts: { secret: string; encoding: 'base32' }): string;
+    verify: (opts: { secret: string; encoding: 'base32'; token: string; window?: number }) => boolean;
   };
+  otpauthURL: (opts: {
+    secret: string;
+    label: string;
+    issuer?: string;
+    encoding: 'base32';
+  }) => string;
 };
-const totp = new TOTP();
+
+/** Thin compatibility shim — keeps the original call sites unchanged so the
+ *  rest of this service doesn't need to learn speakeasy's API. */
+const totp = {
+  generateSecret(length = 20): string {
+    return speakeasy.generateSecret({ length }).base32;
+  },
+  verify({ token, secret }: { token: string; secret: string }): boolean {
+    // window: 1 = accept tokens generated up to one 30s step before/after,
+    // matching otplib's default tolerance and most authenticator apps.
+    return speakeasy.totp.verify({ secret, encoding: 'base32', token, window: 1 });
+  },
+  toURI(account: string, service: string, secret: string): string {
+    return speakeasy.otpauthURL({ secret, label: account, issuer: service, encoding: 'base32' });
+  },
+};
 import { Request } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';

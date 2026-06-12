@@ -14,14 +14,14 @@ export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
 
   @Get()
-  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.CASHIER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
   get(@CurrentUser() user: SafeUser) {
     return this.settingsService.get(user.clientId);
   }
 
   @Patch()
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   update(@Body() dto: UpdateStoreSettingsDto, @CurrentUser() user: SafeUser) {
-    return this.settingsService.update(user.clientId, user.id, dto);
+    return this.settingsService.update(user.clientId, user, dto);
   }
 }

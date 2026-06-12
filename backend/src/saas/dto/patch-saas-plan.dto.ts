@@ -12,9 +12,13 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-import { PlanType } from '@prisma/client';
+import { BusinessType, PlanType } from '@prisma/client';
 
 export class PatchSaasPlanDto {
+  @IsOptional()
+  @IsEnum(BusinessType)
+  businessType?: BusinessType | null;
+
   @IsOptional()
   @IsString()
   @MinLength(1)

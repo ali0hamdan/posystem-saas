@@ -21,7 +21,7 @@ import { ListStockTransfersQueryDto } from './dto/list-stock-transfers.query.dto
 
 @Controller('stock-transfers')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.OWNER, UserRole.ADMIN)
+@Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
 export class StockTransfersController {
   constructor(private readonly stockTransfersService: StockTransfersService) {}
 

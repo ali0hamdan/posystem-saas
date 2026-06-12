@@ -131,7 +131,10 @@ describe('Sales Service — tenant isolation', () => {
       { adjustStock: jest.fn() } as never,
       { log: jest.fn() } as never,
       { get: jest.fn().mockResolvedValue({ taxRate: 0, currency: 'USD' }) } as never,
-      { recordSale: jest.fn(), recordRefund: jest.fn() } as never,
+      { appendEntry: jest.fn() } as never,
+      { notifyPurchaseCompleted: jest.fn() } as never,
+      { refundSale: jest.fn() } as never,
+      { resolveSalesmanId: jest.fn(), calculateCommissionForSale: jest.fn() } as never,
     );
   });
 

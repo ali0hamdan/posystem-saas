@@ -6,7 +6,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { BillingCycle, LicensePlan } from '@prisma/client';
+import { BillingCycle, BusinessType, LicensePlan } from '@prisma/client';
 
 export class RegisterClientDto {
   @IsString()
@@ -38,4 +38,8 @@ export class RegisterClientDto {
 
   @IsEnum(BillingCycle)
   billingCycle!: BillingCycle;
+
+  @IsOptional()
+  @IsEnum(BusinessType)
+  businessType?: BusinessType;
 }

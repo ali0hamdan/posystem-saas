@@ -30,18 +30,26 @@ export class SalesController {
   ) {}
 
   @Post()
-  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.CASHIER)
+  @Roles(
+    UserRole.OWNER,
+    UserRole.ADMIN,
+    UserRole.MANAGER,
+    UserRole.CASHIER,
+    UserRole.SALESMAN,
+    UserRole.GENERAL_MANAGER,
+    UserRole.CO_MANAGER,
+  )
   async create(
     @Body() dto: CreateSaleDto,
     @CurrentUser() user: SafeUser,
     @Headers('x-branch-id') branchHeader?: string,
   ) {
     const branchId = await this.branchScope.resolveBranchId(user, branchHeader);
-    return this.salesService.create(dto, user.id, branchId, user.clientId);
+    return this.salesService.create(dto, user, branchId, user.clientId);
   }
 
   @Get()
-  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.CASHIER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
   async findAll(
     @Query() query: ListSalesQueryDto,
     @CurrentUser() user: SafeUser,
@@ -52,7 +60,7 @@ export class SalesController {
   }
 
   @Get('invoice/:invoiceNumber')
-  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.CASHIER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
   async findByInvoice(
     @Param('invoiceNumber') invoiceNumber: string,
     @CurrentUser() user: SafeUser,
@@ -63,13 +71,13 @@ export class SalesController {
   }
 
   @Get('filters/users')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   listUsersForSaleFilter(@CurrentUser() user: SafeUser) {
     return this.salesService.listUsersForSaleFilter(user.clientId);
   }
 
   @Post(':id/refund')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.GENERAL_MANAGER, UserRole.CO_MANAGER)
   refund(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateRefundDto,
@@ -79,7 +87,7 @@ export class SalesController {
   }
 
   @Get(':id')
-  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.CASHIER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
   async findOne(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: SafeUser,

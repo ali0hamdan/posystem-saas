@@ -8,8 +8,12 @@ import {
 import {
   ActivationCodeStatus,
   BillingCycle,
+  BusinessType,
   ClientStatus,
+  LicensePlan,
+  OtpPurpose,
   PaymentRecordStatus,
+  PlanType,
   Prisma,
   SubscriptionStatus,
   UserRole,
@@ -19,6 +23,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import { MAIN_BRANCH_CODE } from '../branch/branch.constants';
 import type { RegisterClientDto } from './dto/register-client.dto';
+import { resolveDashboardPath } from '../common/dashboard-path.util';
+import { OtpService } from '../otp/otp.service';
+import { NotificationService } from '../notifications/notification.service';
+import type { ResendEmailOtpDto } from './dto/resend-email-otp.dto';
+import type { VerifyEmailOtpDto } from './dto/verify-email-otp.dto';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -46,6 +55,8 @@ export class PublicService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
+    private readonly otp: OtpService,
+    private readonly notifications: NotificationService,
   ) {}
 
   async listActivePlans() {
@@ -58,6 +69,7 @@ export class PublicService {
         name: true,
         description: true,
         type: true,
+        businessType: true,
         monthlyPrice: true,
         yearlyPrice: true,
         oneTimePrice: true,
@@ -74,6 +86,7 @@ export class PublicService {
       monthlyPrice: p.monthlyPrice?.toString() ?? null,
       yearlyPrice: p.yearlyPrice?.toString() ?? null,
       oneTimePrice: p.oneTimePrice?.toString() ?? null,
+      isLifetime: p.type === 'ONE_TIME',
     }));
   }
 
@@ -83,6 +96,15 @@ export class PublicService {
     });
     if (!plan || !plan.isActive) {
       throw new NotFoundException({ message: 'Plan not found', code: 'PLAN_NOT_FOUND' });
+    }
+
+    // Hybrid Desktop Lifetime is discontinued — never sellable, even if the
+    // plan row is reactivated by mistake.
+    if (plan.code === LicensePlan.HYBRID_DESKTOP_LIFETIME) {
+      throw new BadRequestException({
+        message: 'Hybrid Desktop Lifetime is not available.',
+        code: 'PLAN_DISCONTINUED',
+      });
     }
 
     // Validate billing cycle has a price
@@ -98,15 +120,46 @@ export class PublicService {
       });
     }
 
-    // Check email uniqueness
+    // One-time (lifetime) plans must be purchased with the LIFETIME cycle.
+    if (plan.type === PlanType.ONE_TIME && dto.billingCycle !== BillingCycle.LIFETIME) {
+      throw new BadRequestException({
+        message: 'This plan is a one-time purchase and must use the LIFETIME billing cycle',
+        code: 'PLAN_REQUIRES_LIFETIME_CYCLE',
+      });
+    }
+
+    // Business-type-specific plans (e.g. Desktop Lifetime) can only be bought
+    // for the matching business type.
+    const effectiveBusinessType = dto.businessType ?? plan.businessType ?? BusinessType.RETAIL;
+    if (plan.businessType && plan.businessType !== effectiveBusinessType) {
+      throw new BadRequestException({
+        message: `This plan is only available for ${plan.businessType} businesses`,
+        code: 'PLAN_BUSINESS_TYPE_MISMATCH',
+      });
+    }
+
+    const normalizedEmail = dto.email.trim().toLowerCase();
+
+    // Check email uniqueness (client + owner user)
     const existing = await this.prisma.client.findFirst({
-      where: { email: dto.email.trim().toLowerCase(), deletedAt: null },
+      where: { email: normalizedEmail, deletedAt: null },
       select: { id: true },
     });
     if (existing) {
       throw new ConflictException({
         message: 'An account with this email already exists',
         code: 'CLIENT_EMAIL_EXISTS',
+      });
+    }
+
+    const existingOwner = await this.prisma.user.findFirst({
+      where: { email: normalizedEmail, role: UserRole.OWNER },
+      select: { id: true },
+    });
+    if (existingOwner) {
+      throw new ConflictException({
+        message: 'An owner account with this email already exists',
+        code: 'OWNER_EMAIL_EXISTS',
       });
     }
 
@@ -129,7 +182,8 @@ export class PublicService {
           ownerName: dto.ownerName.trim(),
           email: dto.email.trim().toLowerCase(),
           phone: dto.phone?.trim() || null,
-          status: ClientStatus.PENDING_PAYMENT,
+          status: ClientStatus.PENDING_EMAIL_VERIFICATION,
+          businessType: effectiveBusinessType,
         },
       });
 
@@ -153,16 +207,16 @@ export class PublicService {
         },
       });
 
-      const ownerUsername = dto.email.trim().toLowerCase().split('@')[0].replace(/[^a-z0-9]/g, '').slice(0, 30) || 'owner';
       const user = await tx.user.create({
         data: {
           clientId: client.id,
           name: dto.ownerName.trim(),
-          username: `${ownerUsername}-${randomBytes(2).toString('hex')}`,
-          email: dto.email.trim().toLowerCase(),
+          username: normalizedEmail,
+          email: normalizedEmail,
           passwordHash,
           role: UserRole.OWNER,
-          isActive: false, // Activated after payment
+          isActive: false,
+          emailVerified: false,
         },
       });
 
@@ -210,20 +264,155 @@ export class PublicService {
       newValue: {
         planCode: dto.planCode,
         billingCycle: dto.billingCycle,
+        businessType: effectiveBusinessType,
         email: dto.email.trim().toLowerCase(),
       },
     });
 
-    return {
+    await this.otp.createOtp({
+      email: normalizedEmail,
+      purpose: OtpPurpose.EMAIL_VERIFICATION,
+      userId: result.user.id,
       clientId: result.client.id,
-      paymentId: result.paymentRecord.id,
-      amount: result.paymentRecord.amount.toString(),
-      currency: result.paymentRecord.currency,
-      planCode: dto.planCode,
-      billingCycle: dto.billingCycle,
-      businessName: result.client.businessName,
-      username: result.user.username,
+    });
+
+    return {
+      message: 'Verification code sent to email',
+      email: normalizedEmail,
+      nextStep: 'VERIFY_EMAIL' as const,
     };
+  }
+
+  async verifyEmailOtp(dto: VerifyEmailOtpDto) {
+    const email = dto.email.trim().toLowerCase();
+
+    const owner = await this.prisma.user.findFirst({
+      where: { email, role: UserRole.OWNER },
+      include: {
+        client: {
+          select: {
+            id: true,
+            status: true,
+            businessType: true,
+            deletedAt: true,
+          },
+        },
+      },
+    });
+
+    if (!owner?.client || owner.client.deletedAt) {
+      throw new NotFoundException({
+        message: 'Registration not found for this email',
+        code: 'REGISTRATION_NOT_FOUND',
+      });
+    }
+
+    if (owner.emailVerified) {
+      const payment = await this.prisma.paymentRecord.findFirst({
+        where: { clientId: owner.clientId, status: PaymentRecordStatus.PENDING },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true },
+      });
+      const sub = await this.prisma.subscription.findFirst({
+        where: { clientId: owner.clientId },
+        orderBy: { updatedAt: 'desc' },
+        include: { plan: { select: { code: true } } },
+      });
+      return {
+        success: true,
+        message: 'Email already verified',
+        nextStep: 'PAYMENT' as const,
+        paymentId: payment?.id ?? null,
+        businessType: owner.client.businessType,
+        planCode: sub?.plan.code ?? null,
+      };
+    }
+
+    if (owner.client.status !== ClientStatus.PENDING_EMAIL_VERIFICATION) {
+      throw new BadRequestException({
+        message: 'Email verification is not required for this account',
+        code: 'EMAIL_ALREADY_VERIFIED_OR_ACTIVE',
+      });
+    }
+
+    await this.otp.verifyOtp({
+      email,
+      purpose: OtpPurpose.EMAIL_VERIFICATION,
+      code: dto.otp,
+    });
+
+    const now = new Date();
+    const payment = await this.prisma.paymentRecord.findFirst({
+      where: { clientId: owner.clientId, status: PaymentRecordStatus.PENDING },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
+    const sub = await this.prisma.subscription.findFirst({
+      where: { clientId: owner.clientId },
+      orderBy: { updatedAt: 'desc' },
+      include: { plan: { select: { code: true } } },
+    });
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: owner.id },
+        data: { emailVerified: true, emailVerifiedAt: now },
+      }),
+      this.prisma.client.update({
+        where: { id: owner.clientId },
+        data: { status: ClientStatus.PENDING_PAYMENT },
+      }),
+    ]);
+
+    await this.audit.log({
+      userId: owner.id,
+      clientId: owner.clientId,
+      action: 'public.email.verified',
+      entity: 'User',
+      entityId: owner.id,
+      newValue: { email },
+    });
+
+    return {
+      success: true,
+      message: 'Email verified',
+      nextStep: 'PAYMENT' as const,
+      paymentId: payment?.id ?? null,
+      businessType: owner.client.businessType,
+      planCode: sub?.plan.code ?? null,
+    };
+  }
+
+  async resendEmailOtp(dto: ResendEmailOtpDto) {
+    const email = dto.email.trim().toLowerCase();
+
+    const owner = await this.prisma.user.findFirst({
+      where: { email, role: UserRole.OWNER },
+      include: {
+        client: { select: { id: true, status: true, deletedAt: true } },
+      },
+    });
+
+    if (!owner?.client || owner.client.deletedAt) {
+      return { message: 'If this email is registered, a verification code has been sent.' };
+    }
+
+    if (owner.emailVerified) {
+      return { message: 'Email is already verified. You can proceed to payment or sign in.' };
+    }
+
+    if (owner.client.status !== ClientStatus.PENDING_EMAIL_VERIFICATION) {
+      return { message: 'Email verification is not required for this account.' };
+    }
+
+    await this.otp.createOtp({
+      email,
+      purpose: OtpPurpose.EMAIL_VERIFICATION,
+      userId: owner.id,
+      clientId: owner.clientId,
+    });
+
+    return { message: 'Verification code sent to email' };
   }
 
   async getPaymentStatus(paymentId: string) {
@@ -236,9 +425,9 @@ export class PublicService {
         currency: true,
         billingCycle: true,
         paidAt: true,
-        client: { select: { id: true, businessName: true, status: true } },
-        subscription: { select: { id: true, status: true, expiresAt: true } },
-        plan: { select: { code: true, name: true } },
+        client: { select: { id: true, businessName: true, status: true, businessType: true } },
+        subscription: { select: { id: true, status: true, expiresAt: true, maxDevices: true } },
+        plan: { select: { code: true, name: true, type: true, allowsDesktopDownload: true } },
       },
     });
     if (!record) {
@@ -253,6 +442,11 @@ export class PublicService {
       paidAt: record.paidAt?.toISOString() ?? null,
       planCode: record.plan.code,
       planName: record.plan.name,
+      isLifetime: record.billingCycle === BillingCycle.LIFETIME,
+      desktopDownloadEnabled: record.plan.allowsDesktopDownload,
+      unlimited: record.subscription ? record.subscription.maxDevices === null : false,
+      maxDevices: record.subscription?.maxDevices ?? null,
+      businessType: record.client.businessType,
       clientStatus: record.client.status,
       subscriptionStatus: record.subscription?.status ?? null,
     };
@@ -286,6 +480,18 @@ export class PublicService {
       throw new BadRequestException({
         message: 'Payment cannot be completed in its current state',
         code: 'PAYMENT_NOT_PENDING',
+      });
+    }
+    if (record.client.status === ClientStatus.PENDING_EMAIL_VERIFICATION) {
+      throw new BadRequestException({
+        message: 'Please verify your email before completing payment',
+        code: 'EMAIL_NOT_VERIFIED',
+      });
+    }
+    if (record.client.status !== ClientStatus.PENDING_PAYMENT && record.client.status !== ClientStatus.ACTIVE) {
+      throw new BadRequestException({
+        message: 'Client is not eligible for payment completion',
+        code: 'CLIENT_NOT_PENDING_PAYMENT',
       });
     }
 
@@ -328,7 +534,7 @@ export class PublicService {
       // Activate the owner user
       await tx.user.updateMany({
         where: { clientId: record.clientId, role: UserRole.OWNER },
-        data: { isActive: true },
+        data: { isActive: true, emailVerified: true, emailVerifiedAt: now },
       });
 
       return tx.activationCode.create({
@@ -336,11 +542,13 @@ export class PublicService {
           clientId: record.clientId,
           planId: record.planId,
           lookupHash,
+          // Null = unlimited (Desktop Lifetime); maxUses is non-nullable, so
+          // unlimited codes use a high internal value.
           maxBranches: sub.maxBranches,
           maxDevices: sub.maxDevices,
           graceDays: sub.graceDays,
           termDays: days ?? 36500,
-          maxUses: sub.maxDevices,
+          maxUses: sub.maxDevices ?? 1_000_000,
           validUntil: codeValidUntil,
           status: ActivationCodeStatus.UNUSED,
           label: 'Auto-generated on registration',
@@ -357,19 +565,75 @@ export class PublicService {
       newValue: { status: 'PAID', planCode: sub.plan.code },
     });
 
-    // Fetch the username so the response is complete
     const ownerUser = await this.prisma.user.findFirst({
       where: { clientId: record.clientId, role: UserRole.OWNER },
-      select: { username: true },
+      select: { email: true },
     });
+
+    const businessType = record.client.businessType ?? BusinessType.RETAIL;
+
+    // First successful payment → welcome email; later payments → renewal invoice.
+    const previousPaidCount = await this.prisma.paymentRecord.count({
+      where: {
+        clientId: record.clientId,
+        status: PaymentRecordStatus.PAID,
+        id: { not: record.id },
+      },
+    });
+
+    if (previousPaidCount === 0) {
+      void this.notifications
+        .sendWelcomeMessage({
+          clientId: record.clientId,
+          businessType,
+          planName: sub.plan.name,
+          ownerEmail: ownerUser?.email ?? record.client.email,
+          dashboardPath: resolveDashboardPath(businessType),
+        })
+        .catch(() => undefined);
+    } else {
+      void this.notifications
+        .notifySubscriptionRenewed({
+          clientId: record.clientId,
+          planName: sub.plan.name,
+          billingCycle: record.billingCycle,
+          amount: record.amount.toString(),
+          currency: record.currency,
+          paidAt: now,
+          expiresAt,
+          invoiceNumber: record.id.slice(0, 8).toUpperCase(),
+        })
+        .catch(() => undefined);
+    }
+
+    void this.notifications
+      .notifyDeviceActivated({ clientId: record.clientId, planName: sub.plan.name })
+      .catch(() => undefined);
+
+    const isLifetime = record.billingCycle === BillingCycle.LIFETIME;
+    const desktopDownloadEnabled = sub.plan.allowsDesktopDownload;
+    const unlimited = sub.maxDevices === null && sub.maxUsers === null && sub.maxBranches === null;
 
     return {
       success: true,
+      clientId: record.clientId,
       activationCode: plain,
       subscriptionExpiresAt: expiresAt?.toISOString() ?? null,
+      subscriptionStatus: subStatus,
       planCode: sub.plan.code,
-      username: ownerUser?.username ?? null,
-      message: 'Payment confirmed. Use the activation code to activate your POS device.',
+      planName: sub.plan.name,
+      amount: record.amount.toString(),
+      currency: record.currency,
+      isLifetime,
+      desktopDownloadEnabled,
+      unlimited,
+      maxDevices: sub.maxDevices,
+      businessType,
+      ownerEmail: ownerUser?.email ?? record.client.email,
+      nextDashboardUrl: resolveDashboardPath(businessType),
+      message: isLifetime
+        ? 'Payment confirmed. Your desktop license is ready — sign in with your registration email and password.'
+        : 'Payment confirmed. Sign in with your registration email and password.',
     };
   }
 

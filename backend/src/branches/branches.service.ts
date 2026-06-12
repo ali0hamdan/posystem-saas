@@ -8,6 +8,7 @@ import {
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { BranchScopeService } from '../branch/branch-scope.service';
+import { PlanLimitService } from '../common/services/plan-limit.service';
 import { SafeUser } from '../auth/types/safe-user.type';
 import type { LicenseRequestContext } from '../license/license-context.decorator';
 import { CreateBranchDto, UpdateBranchDto } from './dto/branch.dto';
@@ -20,6 +21,7 @@ export class BranchesService {
     private readonly prisma: PrismaService,
     private readonly branchScope: BranchScopeService,
     private readonly licenseService: LicenseService,
+    private readonly planLimit: PlanLimitService,
   ) {}
 
   async listForUser(user: SafeUser) {
@@ -44,6 +46,7 @@ export class BranchesService {
         code: 'BRANCH_CREATE_DENIED',
       });
     }
+    await this.planLimit.assertCanCreateBranch(user.clientId);
     await this.licenseService.assertBranchCapacity(license?.licenseId ?? null);
     const code = dto.code.trim().toUpperCase();
     try {

@@ -13,6 +13,7 @@ const PUBLIC_PREFIXES = [
   '/license/status',
   '/license/check',
   '/activation',
+  '/desktop',
 ];
 
 @Injectable()

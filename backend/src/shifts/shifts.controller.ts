@@ -46,7 +46,7 @@ import { BranchScopeService } from '../branch/branch-scope.service';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 
-@Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.CASHIER)
+@Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
 
 export class ShiftsController {
 

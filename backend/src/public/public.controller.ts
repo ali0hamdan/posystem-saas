@@ -11,6 +11,8 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { PublicService } from './public.service';
 import { RegisterClientDto } from './dto/register-client.dto';
+import { VerifyEmailOtpDto } from './dto/verify-email-otp.dto';
+import { ResendEmailOtpDto } from './dto/resend-email-otp.dto';
 
 @Controller('public')
 export class PublicController {
@@ -26,6 +28,20 @@ export class PublicController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   register(@Body() dto: RegisterClientDto) {
     return this.pub.registerClient(dto);
+  }
+
+  @Post('verify-email-otp')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  verifyEmailOtp(@Body() dto: VerifyEmailOtpDto) {
+    return this.pub.verifyEmailOtp(dto);
+  }
+
+  @Post('resend-email-otp')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  resendEmailOtp(@Body() dto: ResendEmailOtpDto) {
+    return this.pub.resendEmailOtp(dto);
   }
 
   @Get('payments/:id')

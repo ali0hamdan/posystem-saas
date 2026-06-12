@@ -23,7 +23,7 @@ import { ListExpensesQueryDto } from './dto/list-expenses.query.dto';
 
 @Controller('expenses')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.CASHIER)
+@Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
 export class ExpensesController {
   constructor(private readonly expensesService: ExpensesService) {}
 

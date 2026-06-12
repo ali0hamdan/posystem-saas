@@ -1,4 +1,4 @@
-import { ClientStatus } from '@prisma/client';
+import { BusinessType } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsEmail,
@@ -43,6 +43,10 @@ export class PatchSaasClientDto {
   @IsString()
   @MaxLength(40)
   phone?: string | null;
+
+  @IsOptional()
+  @IsEnum(BusinessType)
+  businessType?: BusinessType;
 
   @IsOptional()
   @IsString()

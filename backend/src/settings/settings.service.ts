@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Prisma, RefundApprovalMethod, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
+import { SafeUser } from '../auth/types/safe-user.type';
 import { UpdateStoreSettingsDto } from './dto/update-store-settings.dto';
 
 @Injectable()
@@ -26,8 +27,15 @@ export class SettingsService {
     });
   }
 
-  async update(clientId: string, actorUserId: string, dto: UpdateStoreSettingsDto) {
+  async update(clientId: string, actor: SafeUser, dto: UpdateStoreSettingsDto) {
     const existing = await this.get(clientId);
+
+    if (dto.refundApprovalMethod !== undefined && actor.role !== UserRole.OWNER) {
+      throw new ForbiddenException({
+        message: 'Only the owner can change the refund approval method',
+        code: 'REFUND_APPROVAL_METHOD_FORBIDDEN',
+      });
+    }
 
     const data: Prisma.StoreSettingsUpdateInput = {};
     if (dto.storeName !== undefined) data.storeName = dto.storeName.trim();
@@ -44,6 +52,32 @@ export class SettingsService {
     if (dto.receiptCopies !== undefined) data.receiptCopies = dto.receiptCopies;
     if (dto.receiptShowLogo !== undefined) data.receiptShowLogo = dto.receiptShowLogo;
     if (dto.receiptPrinterName !== undefined) data.receiptPrinterName = dto.receiptPrinterName;
+    if (dto.enableQuotations !== undefined) data.enableQuotations = dto.enableQuotations;
+    if (dto.enableProformaInvoices !== undefined) data.enableProformaInvoices = dto.enableProformaInvoices;
+    if (dto.enableStockReservation !== undefined) data.enableStockReservation = dto.enableStockReservation;
+    if (dto.quotationValidityDays !== undefined) data.quotationValidityDays = dto.quotationValidityDays;
+    if (dto.proformaValidityDays !== undefined) data.proformaValidityDays = dto.proformaValidityDays;
+    if (dto.quotationTerms !== undefined) data.quotationTerms = dto.quotationTerms;
+    if (dto.proformaTerms !== undefined) data.proformaTerms = dto.proformaTerms;
+    if (dto.quotationPrefix !== undefined) data.quotationPrefix = dto.quotationPrefix.trim().toUpperCase();
+    if (dto.proformaPrefix !== undefined) data.proformaPrefix = dto.proformaPrefix.trim().toUpperCase();
+    if (dto.invoicePrefix !== undefined) data.invoicePrefix = dto.invoicePrefix.trim().toUpperCase();
+    if (dto.showTaxOnQuotation !== undefined) data.showTaxOnQuotation = dto.showTaxOnQuotation;
+    if (dto.showSignatureArea !== undefined) data.showSignatureArea = dto.showSignatureArea;
+    if (dto.deliveryNotePrefix !== undefined) data.deliveryNotePrefix = dto.deliveryNotePrefix.trim().toUpperCase();
+    if (dto.defaultPaymentTermsDays !== undefined) data.defaultPaymentTermsDays = dto.defaultPaymentTermsDays;
+    if (dto.enableCustomerCredit !== undefined) data.enableCustomerCredit = dto.enableCustomerCredit;
+    if (dto.enableDeliveryNotes !== undefined) data.enableDeliveryNotes = dto.enableDeliveryNotes;
+    if (dto.enableApprovalWorkflow !== undefined) data.enableApprovalWorkflow = dto.enableApprovalWorkflow;
+    if (dto.allowOverCreditOverride !== undefined) data.allowOverCreditOverride = dto.allowOverCreditOverride;
+    if (dto.allowOverStockOverride !== undefined) data.allowOverStockOverride = dto.allowOverStockOverride;
+    if (dto.emailNotificationsEnabled !== undefined) data.emailNotificationsEnabled = dto.emailNotificationsEnabled;
+    if (dto.notifyLowStock !== undefined) data.notifyLowStock = dto.notifyLowStock;
+    if (dto.notifyInvoicePayment !== undefined) data.notifyInvoicePayment = dto.notifyInvoicePayment;
+    if (dto.notifyCustomerOverdue !== undefined) data.notifyCustomerOverdue = dto.notifyCustomerOverdue;
+    if (dto.notifySubscription !== undefined) data.notifySubscription = dto.notifySubscription;
+    if (dto.notifyDeviceActivation !== undefined) data.notifyDeviceActivation = dto.notifyDeviceActivation;
+    if (dto.refundApprovalMethod !== undefined) data.refundApprovalMethod = dto.refundApprovalMethod;
 
     if (Object.keys(data).length === 0) {
       return existing;
@@ -55,7 +89,7 @@ export class SettingsService {
     });
 
     await this.audit.log({
-      userId: actorUserId,
+      userId: actor.id,
       clientId,
       action: 'settings.update',
       entity: 'StoreSettings',

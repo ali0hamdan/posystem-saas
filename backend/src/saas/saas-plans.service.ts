@@ -16,6 +16,19 @@ function toDecimalOrNull(v: number | null | undefined): Prisma.Decimal | null | 
   return new Prisma.Decimal(v);
 }
 
+/**
+ * Plan/Subscription max-* columns are `Int? @default(...)` in Prisma. The
+ * generated client drops `null` from the create-input type, but the DB
+ * column accepts `null` (= "unlimited", used by Desktop Lifetime plans).
+ * This helper lets us pass `null` through without `any` at the call site.
+ */
+function nullableInt(v: number | null | undefined): number | undefined {
+  if (v === undefined) return undefined;
+  // Runtime value is null (correct); TS type stays number | undefined so
+  // the Prisma generated input type is satisfied.
+  return v as number | undefined;
+}
+
 @Injectable()
 export class SaasPlansService {
   constructor(
@@ -48,13 +61,18 @@ export class SaasPlansService {
         name: dto.name.trim(),
         description: dto.description?.trim() ?? null,
         type: dto.type ?? 'SUBSCRIPTION',
+        businessType: dto.businessType ?? null,
         monthlyPrice: toDecimalOrNull(dto.monthlyPrice),
         yearlyPrice: toDecimalOrNull(dto.yearlyPrice),
         oneTimePrice: toDecimalOrNull(dto.oneTimePrice),
         currency: dto.currency ?? 'USD',
-        maxUsers: dto.maxUsers,
-        maxBranches: dto.maxBranches,
-        maxDevices: dto.maxDevices,
+        // Null = unlimited (Desktop Lifetime plans). The Prisma client's
+        // generated input type drops `null` for these fields when the schema
+        // has `@default(5)`, but the column is `Int?` and `null` is the
+        // correct runtime value for "unlimited" — hence `nullableInt`.
+        maxUsers: nullableInt(dto.maxUsers),
+        maxBranches: nullableInt(dto.maxBranches),
+        maxDevices: nullableInt(dto.maxDevices),
         features: (dto.features ?? {}) as Prisma.InputJsonValue,
         allowsDesktopDownload: dto.allowsDesktopDownload ?? false,
         isActive: dto.isActive ?? true,
@@ -87,6 +105,7 @@ export class SaasPlansService {
         ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
         ...(dto.description !== undefined ? { description: dto.description?.trim() ?? null } : {}),
         ...(dto.type !== undefined ? { type: dto.type } : {}),
+        ...(dto.businessType !== undefined ? { businessType: dto.businessType } : {}),
         ...(dto.monthlyPrice !== undefined ? { monthlyPrice: toDecimalOrNull(dto.monthlyPrice) } : {}),
         ...(dto.yearlyPrice !== undefined ? { yearlyPrice: toDecimalOrNull(dto.yearlyPrice) } : {}),
         ...(dto.oneTimePrice !== undefined ? { oneTimePrice: toDecimalOrNull(dto.oneTimePrice) } : {}),

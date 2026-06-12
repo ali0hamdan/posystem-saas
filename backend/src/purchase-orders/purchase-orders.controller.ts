@@ -52,7 +52,7 @@ import { BranchScopeService } from '../branch/branch-scope.service';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 
-@Roles(UserRole.OWNER, UserRole.ADMIN)
+@Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
 
 export class PurchaseOrdersController {
 

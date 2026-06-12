@@ -34,7 +34,7 @@ export class CustomersController {
   }
 
   @Post()
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   create(@Body() dto: CreateCustomerDto, @CurrentUser() user: SafeUser) {
     return this.customersService.create(dto, user.clientId);
   }
@@ -49,7 +49,7 @@ export class CustomersController {
   }
 
   @Post(':id/payment')
-  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.CASHIER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
   payment(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CustomerPaymentDto,
@@ -59,7 +59,7 @@ export class CustomersController {
   }
 
   @Post(':id/adjust-balance')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   adjustBalance(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AdjustCustomerBalanceDto,
@@ -74,7 +74,7 @@ export class CustomersController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateCustomerDto,

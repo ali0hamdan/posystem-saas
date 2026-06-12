@@ -7,48 +7,66 @@ export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string()
     .valid('development', 'production', 'test')
     .default('development'),
+  APP_MODE: Joi.string().trim().valid('', 'web', 'desktop').default(''),
+  DESKTOP_MODE: Joi.boolean()
+    .truthy('true', '1', 'yes')
+    .falsy('false', '0', 'no')
+    .default(false),
+  HOST: Joi.string().trim().allow('').optional(),
   PORT: Joi.number().integer().min(1).max(65535).default(3000),
   DATABASE_URL: Joi.string().required(),
   CORS_ORIGIN: Joi.string()
     .trim()
     .allow('')
     .default('*')
-    .when('NODE_ENV', {
-      is: 'production',
-      then: Joi.string()
-        .min(8)
-        .invalid('*')
-        .required()
-        .messages({
-          'any.invalid':
-            'CORS_ORIGIN cannot be "*" in production. Set a comma-separated list of allowed web origins (e.g. https://app.example.com).',
-        }),
-      otherwise: Joi.string(),
+    .when(Joi.ref('DESKTOP_MODE'), {
+      is: true,
+      then: Joi.string().allow(''),
+      otherwise: Joi.string().when('NODE_ENV', {
+        is: 'production',
+        then: Joi.string()
+          .min(8)
+          .invalid('*')
+          .required()
+          .messages({
+            'any.invalid':
+              'CORS_ORIGIN cannot be "*" in production. Set a comma-separated list of allowed web origins (e.g. https://app.example.com).',
+          }),
+        otherwise: Joi.string(),
+      }),
     }),
   JWT_SECRET: Joi.string()
     .trim()
-    .when('NODE_ENV', {
-      is: 'production',
-      then: Joi.string()
-        .min(48)
-        .invalid(DEV_PLACEHOLDER_JWT)
-        .required()
-        .messages({
-          'any.invalid':
-            'JWT_SECRET must not use the development placeholder value. Generate a strong secret (e.g. openssl rand -base64 48).',
-        }),
-      otherwise: Joi.string().min(32).required(),
+    .when(Joi.ref('DESKTOP_MODE'), {
+      is: true,
+      then: Joi.string().min(32).required(),
+      otherwise: Joi.string().when('NODE_ENV', {
+        is: 'production',
+        then: Joi.string()
+          .min(48)
+          .invalid(DEV_PLACEHOLDER_JWT)
+          .required()
+          .messages({
+            'any.invalid':
+              'JWT_SECRET must not use the development placeholder value. Generate a strong secret (e.g. openssl rand -base64 48).',
+          }),
+        otherwise: Joi.string().min(32).required(),
+      }),
     }),
   JWT_EXPIRES_IN: Joi.string().default('8h'),
   SAAS_JWT_SECRET: Joi.string()
     .trim()
-    .when('NODE_ENV', {
-      is: 'production',
-      then: Joi.string().min(48).required().messages({
-        'any.required':
-          'SAAS_JWT_SECRET is required in production (separate from JWT_SECRET; used only for SaaS admin API tokens).',
+    .when(Joi.ref('DESKTOP_MODE'), {
+      is: true,
+      then: Joi.string().min(32).required(),
+      otherwise: Joi.string().when('NODE_ENV', {
+        is: 'production',
+        then: Joi.string().min(48).required().messages({
+          'any.required':
+            'SAAS_JWT_SECRET is required in production (separate from JWT_SECRET; used only for SaaS admin API tokens).',
+        }),
+        otherwise: Joi.string().min(32).default('0123456789abcdef0123456789abcdef0123456789ab'),
       }),
-      otherwise: Joi.string().min(32).default('0123456789abcdef0123456789abcdef0123456789ab'),
     }),
   SAAS_JWT_EXPIRES_IN: Joi.string().default('12h'),
   /** If set with SAAS_ADMIN_PASSWORD, `prisma db seed` upserts a SUPER_ADMIN SaaS operator. */
@@ -65,15 +83,25 @@ export const envValidationSchema = Joi.object({
   LOG_LEVEL: Joi.string()
     .valid('fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent')
     .optional(),
+  FRONTEND_URL: Joi.string().trim().uri().allow('').optional(),
+  SMTP_HOST: Joi.string().trim().allow('').optional(),
+  SMTP_PORT: Joi.number().integer().min(1).max(65535).optional(),
+  SMTP_SECURE: Joi.boolean().truthy('true', '1', 'yes').falsy('false', '0', 'no').default(false),
+  SMTP_USER: Joi.string().trim().allow('').optional(),
+  SMTP_PASS: Joi.string().allow('').optional(),
+  SMTP_FROM_NAME: Joi.string().trim().max(120).default('Nezhin POS'),
+  // tlds:false allows internal domains like noreply@nezhinpos.local
+  SMTP_FROM_EMAIL: Joi.string().trim().email({ tlds: false }).allow('').optional(),
 })
   .custom((value, helpers) => {
     const v = value as Record<string, unknown>;
     const bypass = Boolean(v.BYPASS_LICENSE);
+    const desktop = Boolean(v.DESKTOP_MODE);
     const nodeEnv = String(v.NODE_ENV ?? 'development');
     const priv = String(v.LICENSE_RSA_PRIVATE_KEY_B64 ?? '').trim();
     const pub = String(v.LICENSE_RSA_PUBLIC_KEY_B64 ?? '').trim();
 
-    if (!bypass) {
+    if (!bypass && !desktop) {
       if (nodeEnv === 'production') {
         if (!hasLicenseSigningKeyPair(priv, pub)) {
           return helpers.error('any.custom', {

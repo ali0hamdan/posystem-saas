@@ -45,7 +45,7 @@ export class CategoriesController {
   }
 
   @Post()
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   create(
     @Body() dto: CreateCategoryDto,
     @CurrentUser() user: SafeUser,
@@ -54,7 +54,7 @@ export class CategoriesController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateCategoryDto,
@@ -64,7 +64,7 @@ export class CategoriesController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   remove(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: SafeUser,

@@ -29,6 +29,12 @@ export class SaleItemLineDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   discount?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  unitPrice?: number;
 }
 
 export class SalePaymentRowDto {
@@ -74,4 +80,13 @@ export class CreateSaleDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   tax?: number;
+
+  @IsOptional()
+  @IsUUID()
+  salesmanId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  salesmanIdCode?: string;
 }

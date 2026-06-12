@@ -1,5 +1,8 @@
 import { Global, Module } from '@nestjs/common';
+import { TenantController } from './tenant.controller';
 
 @Global()
-@Module({})
+@Module({
+  controllers: [TenantController],
+})
 export class TenantModule {}

@@ -26,7 +26,7 @@ import { BranchScopeService } from '../branch/branch-scope.service';
 
 @Controller('stock-movements')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.OWNER, UserRole.ADMIN)
+@Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
 export class StockMovementsController {
   constructor(
     private readonly stockService: StockService,

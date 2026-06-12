@@ -30,6 +30,21 @@ export class CreateRefundDto {
   @MinLength(3)
   reason!: string;
 
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  approvalIdCode?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(4)
+  nfcCardUid?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(4)
+  approvalPin?: string;
+
   /** When true, refunds all remaining quantities on every sale line (ignores `items`). */
   @IsOptional()
   @IsBoolean()

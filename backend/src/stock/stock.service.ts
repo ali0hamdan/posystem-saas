@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -10,6 +11,7 @@ import {
   StockMovementType,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationService } from '../notifications/notification.service';
 import { ListStockMovementsQueryDto } from './dto/list-stock-movements.query.dto';
 import { ListByProductQueryDto } from './dto/list-by-product.query.dto';
 
@@ -30,16 +32,80 @@ type StockDb = Pick<PrismaService, 'product' | 'stockMovement' | 'branchStock' |
 
 @Injectable()
 export class StockService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(StockService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationService,
+  ) {}
 
   async adjustStock(
     params: AdjustStockParams,
     db?: StockDb,
   ): Promise<{ product: Product; movement: StockMovement; quantity: number; minStock: number }> {
-    if (db) {
-      return this.runAdjustment(db, params);
+    const result = db
+      ? await this.runAdjustment(db, params)
+      : await this.prisma.$transaction((tx) => this.runAdjustment(tx, params));
+
+    void this.runPostAdjustmentNotifications(params, result).catch((err) =>
+      this.logger.warn(`Stock notification failed: ${(err as Error).message}`),
+    );
+    return result;
+  }
+
+  private async runPostAdjustmentNotifications(
+    params: AdjustStockParams,
+    result: { product: Product; movement: StockMovement; quantity: number; minStock: number },
+  ): Promise<void> {
+    const { previousQuantity } = result.movement;
+    const { quantity: newQuantity, minStock } = result;
+
+    const crossedBelowThreshold = newQuantity <= minStock && previousQuantity > minStock;
+    const stockIncreased =
+      params.quantityChange > 0 &&
+      (params.type === StockMovementType.PURCHASE || params.type === StockMovementType.ADJUSTMENT);
+
+    if (!crossedBelowThreshold && !stockIncreased) return;
+
+    const [branch, creator] = await Promise.all([
+      this.prisma.branch.findFirst({
+        where: { id: params.branchId, clientId: params.clientId },
+        select: { name: true },
+      }),
+      stockIncreased
+        ? this.prisma.user.findFirst({
+            where: { id: params.createdById, clientId: params.clientId },
+            select: { name: true },
+          })
+        : Promise.resolve(null),
+    ]);
+    const branchName = branch?.name ?? 'Main';
+
+    if (crossedBelowThreshold) {
+      await this.notifications.notifyLowStock({
+        clientId: params.clientId,
+        productName: result.product.name,
+        sku: result.product.sku,
+        currentStock: newQuantity,
+        minStock,
+        branchName,
+        productId: result.product.id,
+      });
     }
-    return this.prisma.$transaction((tx) => this.runAdjustment(tx, params));
+
+    if (stockIncreased) {
+      await this.notifications.notifyStockAdded({
+        clientId: params.clientId,
+        productName: result.product.name,
+        sku: result.product.sku,
+        quantityAdded: params.quantityChange,
+        oldStock: previousQuantity,
+        newStock: newQuantity,
+        branchName,
+        reason: params.reason,
+        createdByName: creator?.name ?? null,
+      });
+    }
   }
 
   async findAll(clientId: string, query: ListStockMovementsQueryDto) {

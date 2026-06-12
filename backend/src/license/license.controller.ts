@@ -75,4 +75,12 @@ export class LicenseController {
     }
     return this.license.refresh(user.id, token);
   }
+
+  /** Desktop installer download (auth required; plan must include desktop_download). */
+  @Get('download-desktop')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  downloadDesktop(@CurrentUser() user: SafeUser) {
+    return this.license.getDesktopDownload(user.clientId);
+  }
 }

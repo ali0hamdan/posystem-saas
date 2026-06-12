@@ -631,6 +631,7 @@ export class ReportsService {
         take: limit,
         include: {
           user: { select: { id: true, name: true, username: true, role: true } },
+          approvedBy: { select: { id: true, name: true, username: true, role: true } },
           sale: {
             select: {
               id: true,

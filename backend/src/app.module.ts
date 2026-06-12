@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerModule } from 'nestjs-pino';
 import configuration from './config/configuration';
 import monitoringConfig from './config/monitoring.config';
@@ -35,10 +36,33 @@ import { StockTransfersModule } from './stock-transfers/stock-transfers.module';
 import { CustomersModule } from './customers/customers.module';
 import { LicenseModule } from './license/license.module';
 import { TenantModule } from './tenant/tenant.module';
+import { FeatureModule } from './fnb/feature/feature.module';
+import { FnbTablesModule } from './fnb/tables/fnb-tables.module';
+import { FnbMenuModule } from './fnb/menu/fnb-menu.module';
+import { FnbOrdersModule } from './fnb/orders/fnb-orders.module';
+import { FnbKitchenModule } from './fnb/kitchen/fnb-kitchen.module';
+import { FnbRecipesModule } from './fnb/recipes/fnb-recipes.module';
+import { FnbReservationsModule } from './fnb/reservations/fnb-reservations.module';
+import { FnbReportsModule } from './fnb/reports/fnb-reports.module';
+import { WasteModule } from './fnb/waste/waste.module';
+import { DeliveryModule } from './fnb/delivery/delivery.module';
+import { IngredientsModule } from './fnb/ingredients/ingredients.module';
 import { SaasAuthModule } from './saas/saas-auth.module';
 import { ActivationModule } from './activation/activation.module';
 import { CouponsModule } from './coupons/coupons.module';
 import { PublicModule } from './public/public.module';
+import { CommonModule } from './common/common.module';
+import { SubscriptionEnforcementInterceptor } from './common/interceptors/subscription-enforcement.interceptor';
+import { QuotationsModule } from './quotations/quotations.module';
+import { ProformaInvoicesModule } from './proforma-invoices/proforma-invoices.module';
+import { WholesaleModule } from './wholesale/wholesale.module';
+import { EmailModule } from './email/email.module';
+import { NotificationModule } from './notifications/notification.module';
+import { RefundsModule } from './refunds/refund.module';
+import { PermissionsModule } from './permissions/permissions.module';
+import { CommissionsModule } from './commissions/commissions.module';
+import { ApprovalsModule } from './approvals/approvals.module';
+import { DesktopModule } from './desktop/desktop.module';
 
 @Module({
   imports: [
@@ -127,7 +151,22 @@ import { PublicModule } from './public/public.module';
         ],
       }),
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
+    EmailModule,
+    NotificationModule,
+    CommonModule,
+    FeatureModule,
+    FnbTablesModule,
+    FnbMenuModule,
+    FnbOrdersModule,
+    FnbKitchenModule,
+    FnbRecipesModule,
+    FnbReservationsModule,
+    FnbReportsModule,
+    WasteModule,
+    DeliveryModule,
+    IngredientsModule,
     TenantModule,
     HealthModule,
     AuthModule,
@@ -138,6 +177,8 @@ import { PublicModule } from './public/public.module';
     ProductsModule,
     StockModule,
     SalesModule,
+    RefundsModule,
+    PermissionsModule,
     SuppliersModule,
     PurchaseOrdersModule,
     ShiftsModule,
@@ -152,6 +193,12 @@ import { PublicModule } from './public/public.module';
     ActivationModule,
     CouponsModule,
     PublicModule,
+    QuotationsModule,
+    ProformaInvoicesModule,
+    WholesaleModule,
+    CommissionsModule,
+    ApprovalsModule,
+    DesktopModule,
   ],
   providers: [
     {
@@ -165,6 +212,10 @@ import { PublicModule } from './public/public.module';
     {
       provide: APP_FILTER,
       useClass: AllExceptionsFilter,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: SubscriptionEnforcementInterceptor,
     },
   ],
 })

@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { ReceiptPaperSize } from '@prisma/client';
+import { ReceiptPaperSize, RefundApprovalMethod } from '@prisma/client';
 import {
   IsBoolean,
   IsEnum,
@@ -96,4 +96,125 @@ export class UpdateStoreSettingsDto {
   @IsString()
   @MaxLength(200)
   receiptPrinterName?: string | null;
+
+  // B2B document workflow settings.
+  @IsOptional()
+  @IsBoolean()
+  enableQuotations?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  enableProformaInvoices?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  enableStockReservation?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(3650)
+  quotationValidityDays?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(3650)
+  proformaValidityDays?: number;
+
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? null : value))
+  @ValidateIf((_, v) => v !== undefined && v !== null)
+  @IsString()
+  @MaxLength(2000)
+  quotationTerms?: string | null;
+
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? null : value))
+  @ValidateIf((_, v) => v !== undefined && v !== null)
+  @IsString()
+  @MaxLength(2000)
+  proformaTerms?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[A-Za-z0-9-]{1,8}$/, { message: 'quotationPrefix must be 1-8 alphanumeric chars (or "-")' })
+  quotationPrefix?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[A-Za-z0-9-]{1,8}$/, { message: 'proformaPrefix must be 1-8 alphanumeric chars (or "-")' })
+  proformaPrefix?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[A-Za-z0-9-]{1,8}$/, { message: 'invoicePrefix must be 1-8 alphanumeric chars (or "-")' })
+  invoicePrefix?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  showTaxOnQuotation?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  showSignatureArea?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[A-Za-z0-9-]{1,8}$/, { message: 'deliveryNotePrefix must be 1-8 alphanumeric chars (or "-")' })
+  deliveryNotePrefix?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(3650)
+  defaultPaymentTermsDays?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  enableCustomerCredit?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  enableDeliveryNotes?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  enableApprovalWorkflow?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  allowOverCreditOverride?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  allowOverStockOverride?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  emailNotificationsEnabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  notifyLowStock?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  notifyInvoicePayment?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  notifyCustomerOverdue?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  notifySubscription?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  notifyDeviceActivation?: boolean;
+
+  @IsOptional()
+  @IsEnum(RefundApprovalMethod)
+  refundApprovalMethod?: RefundApprovalMethod;
 }

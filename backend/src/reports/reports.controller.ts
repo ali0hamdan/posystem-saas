@@ -31,14 +31,14 @@ export class ReportsController {
   ) {}
 
   @Get('dashboard')
-  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.CASHIER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
   async dashboard(@CurrentUser() user: SafeUser, @Headers('x-branch-id') branchHeader?: string) {
     const branchId = await this.branchScope.resolveBranchIdForReport(user, branchHeader, undefined);
     return this.reportsService.dashboard(user, branchId);
   }
 
   @Get('daily-sales')
-  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.CASHIER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
   async dailySales(
     @CurrentUser() user: SafeUser,
     @Query() query: DailySalesQueryDto,
@@ -49,7 +49,7 @@ export class ReportsController {
   }
 
   @Get('monthly-sales')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async monthlySales(
     @CurrentUser() user: SafeUser,
     @Query() query: ReportsDateRangeQueryDto,
@@ -60,7 +60,7 @@ export class ReportsController {
   }
 
   @Get('profit')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async profit(
     @CurrentUser() user: SafeUser,
     @Query() query: ReportsDateRangeQueryDto,
@@ -71,7 +71,7 @@ export class ReportsController {
   }
 
   @Get('best-selling-products')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async bestSellingProducts(
     @CurrentUser() user: SafeUser,
     @Query() query: BestSellingQueryDto,
@@ -82,7 +82,7 @@ export class ReportsController {
   }
 
   @Get('low-stock')
-  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.CASHIER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
   async lowStock(
     @CurrentUser() user: SafeUser,
     @Query() query: ReportsPaginationQueryDto,
@@ -93,14 +93,14 @@ export class ReportsController {
   }
 
   @Get('stock-value')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async stockValue(@CurrentUser() user: SafeUser, @Headers('x-branch-id') branchHeader?: string) {
     const branchId = await this.branchScope.resolveBranchIdForReport(user, branchHeader, undefined);
     return this.reportsService.stockValue(user, branchId);
   }
 
   @Get('cashier-performance')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async cashierPerformance(
     @CurrentUser() user: SafeUser,
     @Query() query: CashierPerformanceQueryDto,
@@ -111,7 +111,7 @@ export class ReportsController {
   }
 
   @Get('refunds')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async refunds(
     @CurrentUser() user: SafeUser,
     @Query() query: RefundsReportQueryDto,
@@ -122,7 +122,7 @@ export class ReportsController {
   }
 
   @Get('customer-debts')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async customerDebts(
     @CurrentUser() user: SafeUser,
     @Query() query: ReportsPaginationQueryDto,
@@ -133,7 +133,7 @@ export class ReportsController {
   }
 
   @Get('customer-credit/summary')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async customerCreditSummary(
     @CurrentUser() user: SafeUser,
     @Headers('x-branch-id') branchHeader?: string,
@@ -143,7 +143,7 @@ export class ReportsController {
   }
 
   @Get('customer-payment-history')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async customerPaymentHistory(
     @CurrentUser() user: SafeUser,
     @Query() query: CustomerPaymentHistoryQueryDto,
@@ -156,7 +156,7 @@ export class ReportsController {
   // --- Commercial / POS-level reports (COGS from SaleItem.costPriceAtSale; refunds netted) ---
 
   @Get('sales-summary')
-  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.CASHIER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
   async salesSummary(
     @CurrentUser() user: SafeUser,
     @Query() query: ReportsDateRangeQueryDto,
@@ -167,7 +167,7 @@ export class ReportsController {
   }
 
   @Get('profit-and-loss')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async profitAndLoss(
     @CurrentUser() user: SafeUser,
     @Query() query: ReportsDateRangeQueryDto,
@@ -178,7 +178,7 @@ export class ReportsController {
   }
 
   @Get('gross-profit-by-product')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async grossProfitByProduct(
     @CurrentUser() user: SafeUser,
     @Query() query: GrossProfitByProductQueryDto,
@@ -189,7 +189,7 @@ export class ReportsController {
   }
 
   @Get('gross-profit-by-category')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async grossProfitByCategory(
     @CurrentUser() user: SafeUser,
     @Query() query: ReportsDateRangeQueryDto,
@@ -200,7 +200,7 @@ export class ReportsController {
   }
 
   @Get('payment-methods')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async paymentMethods(
     @CurrentUser() user: SafeUser,
     @Query() query: ReportsDateRangeQueryDto,
@@ -211,7 +211,7 @@ export class ReportsController {
   }
 
   @Get('discounts')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async discountsReport(
     @CurrentUser() user: SafeUser,
     @Query() query: ReportsDateRangeQueryDto,
@@ -222,7 +222,7 @@ export class ReportsController {
   }
 
   @Get('stock-valuation')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async stockValuationDetailed(
     @CurrentUser() user: SafeUser,
     @Query() query: ReportsPaginationQueryDto,
@@ -233,7 +233,7 @@ export class ReportsController {
   }
 
   @Get('inventory-movements')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async inventoryMovements(
     @CurrentUser() user: SafeUser,
     @Query() query: InventoryMovementsQueryDto,
@@ -244,7 +244,7 @@ export class ReportsController {
   }
 
   @Get('products-expiry')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async productsExpiry(
     @CurrentUser() user: SafeUser,
     @Query() query: ProductExpiryReportQueryDto,
@@ -255,7 +255,7 @@ export class ReportsController {
   }
 
   @Get('supplier-purchases')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async supplierPurchases(
     @CurrentUser() user: SafeUser,
     @Query() query: ReportsDateRangeQueryDto,
@@ -266,7 +266,7 @@ export class ReportsController {
   }
 
   @Get('shift-closing')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async shiftClosing(
     @CurrentUser() user: SafeUser,
     @Query() query: ReportsDateRangeQueryDto,
@@ -283,7 +283,7 @@ export class ReportsController {
   }
 
   @Get('customer-debt-report')
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async customerDebtReport(@CurrentUser() user: SafeUser, @Query() query: ReportsPaginationQueryDto) {
     return this.commercialReports.customerDebtReport(user, query);
   }

@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CustomerLedgerService } from './customer-ledger.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
+import { customerPublicSelect, mapCustomerPublic } from './customer.mapper';
 import { ListCustomersQueryDto } from './dto/list-customers.query.dto';
 import { ListLedgerQueryDto } from './dto/list-ledger.query.dto';
 import { CustomerPaymentDto } from './dto/customer-payment.dto';
@@ -44,6 +45,10 @@ export class CustomersService {
             OR: [
               { name: { contains: q, mode: 'insensitive' } },
               { phone: { contains: q, mode: 'insensitive' } },
+              { email: { contains: q, mode: 'insensitive' } },
+              { companyName: { contains: q, mode: 'insensitive' } },
+              { taxNumber: { contains: q, mode: 'insensitive' } },
+              { address: { contains: q, mode: 'insensitive' } },
             ],
           }
         : {}),
@@ -55,21 +60,13 @@ export class CustomersService {
         orderBy: { name: 'asc' },
         skip,
         take: limit,
-        select: {
-          id: true,
-          name: true,
-          phone: true,
-          balance: true,
-          loyaltyPoints: true,
-          createdAt: true,
-          updatedAt: true,
-        },
+        select: customerPublicSelect,
       }),
       this.prisma.customer.count({ where }),
     ]);
 
     return {
-      data,
+      data: data.map(mapCustomerPublic),
       meta: {
         page,
         limit,
@@ -80,32 +77,55 @@ export class CustomersService {
   }
 
   async create(dto: CreateCustomerDto, clientId: string) {
-    return this.prisma.customer.create({
-      data: {
-        clientId,
-        name: dto.name.trim(),
-        phone: dto.phone?.trim() || null,
-      },
+    const created = await this.prisma.$transaction(async (tx) => {
+      const customer = await tx.customer.create({
+        data: {
+          clientId,
+          name: dto.name.trim(),
+          phone: dto.phone?.trim() || null,
+          email: dto.email?.trim().toLowerCase() || null,
+          address: dto.address?.trim() || null,
+          companyName: dto.companyName?.trim() || null,
+          taxNumber: dto.taxNumber?.trim() || null,
+          notes: dto.notes?.trim() || null,
+          isActive: dto.isActive ?? true,
+        },
+        select: customerPublicSelect,
+      });
+      if (dto.creditLimit !== undefined || dto.paymentTermsDays !== undefined) {
+        await tx.customerCreditProfile.upsert({
+          where: { customerId: customer.id },
+          create: {
+            clientId,
+            customerId: customer.id,
+            creditLimit: d(dto.creditLimit ?? 0),
+            paymentTermsDays: dto.paymentTermsDays ?? 0,
+          },
+          update: {
+            ...(dto.creditLimit !== undefined ? { creditLimit: d(dto.creditLimit) } : {}),
+            ...(dto.paymentTermsDays !== undefined ? { paymentTermsDays: dto.paymentTermsDays } : {}),
+          },
+        });
+        const refreshed = await tx.customer.findFirst({
+          where: { id: customer.id, clientId },
+          select: customerPublicSelect,
+        });
+        return refreshed!;
+      }
+      return customer;
     });
+    return mapCustomerPublic(created);
   }
 
   async findOne(id: string, clientId: string) {
     const c = await this.prisma.customer.findFirst({
       where: { id, clientId },
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        balance: true,
-        loyaltyPoints: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: customerPublicSelect,
     });
     if (!c) {
       throw new NotFoundException({ message: 'Customer not found', code: 'CUSTOMER_NOT_FOUND' });
     }
-    return c;
+    return mapCustomerPublic(c);
   }
 
   async update(id: string, dto: UpdateCustomerDto, clientId: string) {
@@ -113,13 +133,39 @@ export class CustomersService {
     if (!existing) {
       throw new NotFoundException({ message: 'Customer not found', code: 'CUSTOMER_NOT_FOUND' });
     }
-    return this.prisma.customer.update({
-      where: { id },
-      data: {
-        ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
-        ...(dto.phone !== undefined ? { phone: dto.phone?.trim() || null } : {}),
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await tx.customer.update({
+        where: { id },
+        data: {
+          ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+          ...(dto.phone !== undefined ? { phone: dto.phone?.trim() || null } : {}),
+          ...(dto.email !== undefined ? { email: dto.email?.trim().toLowerCase() || null } : {}),
+          ...(dto.address !== undefined ? { address: dto.address?.trim() || null } : {}),
+          ...(dto.companyName !== undefined ? { companyName: dto.companyName?.trim() || null } : {}),
+          ...(dto.taxNumber !== undefined ? { taxNumber: dto.taxNumber?.trim() || null } : {}),
+          ...(dto.notes !== undefined ? { notes: dto.notes?.trim() || null } : {}),
+          ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+        },
+      });
+      if (dto.creditLimit !== undefined || dto.paymentTermsDays !== undefined) {
+        await tx.customerCreditProfile.upsert({
+          where: { customerId: id },
+          create: {
+            clientId,
+            customerId: id,
+            creditLimit: d(dto.creditLimit ?? 0),
+            paymentTermsDays: dto.paymentTermsDays ?? 0,
+          },
+          update: {
+            ...(dto.creditLimit !== undefined ? { creditLimit: d(dto.creditLimit) } : {}),
+            ...(dto.paymentTermsDays !== undefined ? { paymentTermsDays: dto.paymentTermsDays } : {}),
+          },
+        });
+      }
+      const row = await tx.customer.findFirst({ where: { id, clientId }, select: customerPublicSelect });
+      return row!;
     });
+    return mapCustomerPublic(updated);
   }
 
   async getLedger(customerId: string, query: ListLedgerQueryDto, clientId: string) {
@@ -189,20 +235,12 @@ export class CustomersService {
       });
       const updated = await tx.customer.findFirst({
         where: { id: customerId, clientId },
-        select: {
-          id: true,
-          name: true,
-          phone: true,
-          balance: true,
-          loyaltyPoints: true,
-          createdAt: true,
-          updatedAt: true,
-        },
+        select: customerPublicSelect,
       });
       return {
         receiptNumber,
         amountApplied: applied.toString(),
-        customer: updated!,
+        customer: mapCustomerPublic(updated!),
       };
     });
   }
@@ -234,18 +272,11 @@ export class CustomersService {
         note: dto.note?.trim() ? `${reason} — ${dto.note.trim()}` : reason,
         createdById,
       });
-      return tx.customer.findFirst({
+      const row = await tx.customer.findFirst({
         where: { id: customerId, clientId },
-        select: {
-          id: true,
-          name: true,
-          phone: true,
-          balance: true,
-          loyaltyPoints: true,
-          createdAt: true,
-          updatedAt: true,
-        },
+        select: customerPublicSelect,
       });
+      return mapCustomerPublic(row!);
     });
   }
 

@@ -24,13 +24,13 @@ export class BranchesController {
   constructor(private readonly branchesService: BranchesService) {}
 
   @Get()
-  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.CASHIER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
   list(@CurrentUser() user: SafeUser) {
     return this.branchesService.listForUser(user);
   }
 
   @Get(':id')
-  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.CASHIER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
   findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: SafeUser) {
     return this.branchesService.findOne(id, user);
   }

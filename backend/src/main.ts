@@ -104,8 +104,9 @@ async function bootstrap(): Promise<void> {
   }
 
   const port = config.get<number>('app.port') ?? 3000;
-  await app.listen(port);
-  logger.log(`HTTP server listening on port ${port}`);
+  const host = config.get<string>('app.host') ?? '0.0.0.0';
+  await app.listen(port, host);
+  logger.log(`HTTP server listening on ${host}:${port}`);
 }
 
 bootstrap().catch((err: unknown) => {

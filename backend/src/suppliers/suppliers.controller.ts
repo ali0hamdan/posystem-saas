@@ -25,7 +25,7 @@ import {
 
 @Controller('suppliers')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.OWNER, UserRole.ADMIN)
+@Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
 export class SuppliersController {
   constructor(private readonly suppliersService: SuppliersService) {}
 

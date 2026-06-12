@@ -9,6 +9,7 @@ import { Prisma, User, UserRole } from '@prisma/client';
 import { hash } from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
+import { PlanLimitService } from '../common/services/plan-limit.service';
 import { SafeUser } from '../auth/types/safe-user.type';
 import { sanitizeUser } from '../auth/utils/sanitize-user';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -16,6 +17,11 @@ import { ListUsersQueryDto } from './dto/list-users.query.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
+import { NotificationService } from '../notifications/notification.service';
+import { PermissionsService } from '../permissions/permissions.service';
+import { BusinessType } from '@prisma/client';
+import { SalesmanIdService } from './salesman-id.service';
+import { ApprovalIdService, REFUND_APPROVAL_ROLES } from './approval-id.service';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -24,18 +30,23 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
+    private readonly planLimit: PlanLimitService,
+    private readonly notifications: NotificationService,
+    private readonly permissions: PermissionsService,
+    private readonly salesmanId: SalesmanIdService,
+    private readonly approvalId: ApprovalIdService,
   ) {}
 
   private listWhereForActor(actor: SafeUser): Prisma.UserWhereInput {
     const base: Prisma.UserWhereInput = { clientId: actor.clientId };
-    if (actor.role === UserRole.ADMIN) {
+    if (this.isAdminLevel(actor.role)) {
       return { ...base, role: UserRole.CASHIER };
     }
     return base;
   }
 
   private assertAdminTargetsCashierOnly(actor: SafeUser, target: Pick<User, 'role' | 'clientId'>): void {
-    if (actor.role !== UserRole.ADMIN) return;
+    if (!this.isAdminLevel(actor.role)) return;
     if (target.clientId !== actor.clientId) {
       throw new ForbiddenException({
         message: 'You do not have access to this user',
@@ -50,8 +61,12 @@ export class UsersService {
     }
   }
 
+  private isAdminLevel(role: UserRole): boolean {
+    return role === UserRole.ADMIN || role === UserRole.GENERAL_MANAGER;
+  }
+
   private assertAdminCreateRole(actor: SafeUser, role: UserRole): void {
-    if (actor.role === UserRole.ADMIN && role !== UserRole.CASHIER) {
+    if (this.isAdminLevel(actor.role) && role !== UserRole.CASHIER) {
       throw new ForbiddenException({
         message: 'Administrators may only create cashier accounts',
         code: 'USER_CREATE_CASHIER_ONLY',
@@ -60,7 +75,7 @@ export class UsersService {
   }
 
   private assertAdminRoleChange(actor: SafeUser, nextRole: UserRole, target: User): void {
-    if (actor.role !== UserRole.ADMIN) return;
+    if (!this.isAdminLevel(actor.role)) return;
     if (nextRole !== UserRole.CASHIER) {
       throw new ForbiddenException({
         message: 'Administrators may only assign the cashier role',
@@ -114,6 +129,14 @@ export class UsersService {
 
   async create(actor: SafeUser, dto: CreateUserDto) {
     this.assertAdminCreateRole(actor, dto.role);
+    if (dto.role === UserRole.OWNER && actor.role !== UserRole.OWNER) {
+      throw new ForbiddenException({
+        message: 'Only the owner can create another owner account',
+        code: 'OWNER_CREATE_FORBIDDEN',
+      });
+    }
+    await this.assertRoleAllowedForClient(actor, dto.role);
+    await this.planLimit.assertCanCreateUser(actor.clientId);
     const username = dto.username.trim().toLowerCase();
     const emailNorm = dto.email?.trim() ? dto.email.trim().toLowerCase() : undefined;
 
@@ -121,6 +144,15 @@ export class UsersService {
     if (emailNorm) await this.assertEmailAvailable(actor.clientId, emailNorm);
 
     const passwordHash = await hash(dto.password, BCRYPT_ROUNDS);
+    let salesmanIdCode: string | null = null;
+    if (dto.role === UserRole.SALESMAN) {
+      salesmanIdCode = await this.salesmanId.generateSalesmanIdCode(actor.clientId, dto.name.trim());
+    }
+
+    let approvalIdCode: string | null = null;
+    if (REFUND_APPROVAL_ROLES.includes(dto.role)) {
+      approvalIdCode = await this.approvalId.generateApprovalIdCode(actor.clientId, dto.name.trim());
+    }
 
     const user = await this.prisma.user.create({
       data: {
@@ -130,6 +162,10 @@ export class UsersService {
         email: emailNorm ?? null,
         passwordHash,
         role: dto.role,
+        salesmanIdCode,
+        approvalIdCode,
+        emailVerified: Boolean(emailNorm),
+        emailVerifiedAt: emailNorm ? new Date() : null,
       },
     });
 
@@ -146,6 +182,16 @@ export class UsersService {
       },
     });
 
+    void this.notifications
+      .notifyUserCreated({
+        clientId: actor.clientId,
+        newUserName: user.name,
+        newUserEmail: user.email,
+        newUserRole: user.role,
+        createdByName: actor.name,
+      })
+      .catch(() => undefined);
+
     return sanitizeUser(user);
   }
 
@@ -155,6 +201,13 @@ export class UsersService {
 
     if (dto.role !== undefined && dto.role !== existing.role) {
       this.assertAdminRoleChange(actor, dto.role, existing);
+      if (dto.role === UserRole.OWNER && actor.role !== UserRole.OWNER) {
+        throw new ForbiddenException({
+          message: 'Only the owner can assign the owner role',
+          code: 'OWNER_ASSIGN_FORBIDDEN',
+        });
+      }
+      await this.assertRoleAllowedForClient(actor, dto.role);
     }
 
     if (dto.username !== undefined) {
@@ -179,6 +232,15 @@ export class UsersService {
     if (dto.email !== undefined) {
       const raw = dto.email === null || dto.email === undefined ? '' : String(dto.email).trim();
       data.email = raw === '' ? null : raw.toLowerCase();
+    }
+
+    const nextRole = dto.role ?? existing.role;
+    const nextName = dto.name !== undefined ? dto.name.trim() : existing.name;
+    if (nextRole === UserRole.SALESMAN && !existing.salesmanIdCode) {
+      data.salesmanIdCode = await this.salesmanId.generateSalesmanIdCode(actor.clientId, nextName);
+    }
+    if (REFUND_APPROVAL_ROLES.includes(nextRole) && !existing.approvalIdCode) {
+      data.approvalIdCode = await this.approvalId.generateApprovalIdCode(actor.clientId, nextName);
     }
 
     if (Object.keys(data).length === 0) {
@@ -304,6 +366,20 @@ export class UsersService {
       throw new ConflictException({
         message: 'Email is already in use',
         code: 'EMAIL_TAKEN',
+      });
+    }
+  }
+
+  private async assertRoleAllowedForClient(actor: SafeUser, role: UserRole): Promise<void> {
+    const client = await this.prisma.client.findUnique({
+      where: { id: actor.clientId },
+      select: { businessType: true },
+    });
+    const businessType = client?.businessType ?? BusinessType.RETAIL;
+    if (!this.permissions.isRoleAllowedForBusinessType(role, businessType)) {
+      throw new BadRequestException({
+        message: `Role ${role} is not available for this business type`,
+        code: 'ROLE_NOT_ALLOWED_FOR_BUSINESS_TYPE',
       });
     }
   }

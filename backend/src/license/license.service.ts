@@ -139,14 +139,17 @@ export class LicenseService {
         }
       }
 
-      const activeDevices = await tx.device.count({
-        where: { clientId: clientId!, isActive: true },
-      });
-      if (activeDevices >= code.maxDevices) {
-        throw new ForbiddenException({
-          message: 'Maximum active devices reached for this client',
-          code: 'LICENSE_DEVICE_LIMIT',
+      // maxDevices null = unlimited (Desktop Lifetime codes).
+      if (code.maxDevices != null) {
+        const activeDevices = await tx.device.count({
+          where: { clientId: clientId!, isActive: true },
         });
+        if (activeDevices >= code.maxDevices) {
+          throw new ForbiddenException({
+            message: 'Maximum active devices reached for this client',
+            code: 'LICENSE_DEVICE_LIMIT',
+          });
+        }
       }
 
       await tx.subscription.updateMany({
@@ -345,12 +348,15 @@ export class LicenseService {
     if (Date.now() > lockMs) {
       throw new ForbiddenException({ message: 'No active license', code: 'LICENSE_REQUIRED' });
     }
-    const n = await this.prisma.branch.count({ where: { clientId: lic.clientId } });
-    if (n >= lic.maxBranches) {
-      throw new ForbiddenException({
-        message: `Branch limit reached (${lic.maxBranches}) for your license`,
-        code: 'LICENSE_BRANCH_LIMIT',
-      });
+    // maxBranches null = unlimited (Desktop Lifetime).
+    if (lic.maxBranches != null) {
+      const n = await this.prisma.branch.count({ where: { clientId: lic.clientId } });
+      if (n >= lic.maxBranches) {
+        throw new ForbiddenException({
+          message: `Branch limit reached (${lic.maxBranches}) for your license`,
+          code: 'LICENSE_BRANCH_LIMIT',
+        });
+      }
     }
   }
 
@@ -360,7 +366,7 @@ export class LicenseService {
     warning: boolean,
     plan: LicensePlan | null,
     expiresAt: Date | null,
-    sub: { maxUsers: number; maxBranches: number; maxDevices: number; graceDays: number } | null,
+    sub: { maxUsers: number | null; maxBranches: number | null; maxDevices: number | null; graceDays: number } | null,
     planFeatures: unknown,
   ): LicenseSurfacePayload {
     const now = Date.now();
@@ -382,9 +388,10 @@ export class LicenseService {
       expiresAt: expiresAt?.toISOString() ?? null,
       daysRemaining,
       graceRemaining,
-      maxUsers: sub?.maxUsers ?? 0,
-      maxBranches: sub?.maxBranches ?? 0,
-      maxDevices: sub?.maxDevices ?? 0,
+      // Null = unlimited (Desktop Lifetime); 0 = no subscription context.
+      maxUsers: sub ? sub.maxUsers : 0,
+      maxBranches: sub ? sub.maxBranches : 0,
+      maxDevices: sub ? sub.maxDevices : 0,
       enabledFeatures: parseEnabledFeatures(planFeatures),
     };
   }
@@ -482,5 +489,96 @@ export class LicenseService {
       });
     }
     return result;
+  }
+
+  /**
+   * Desktop installer download for the authenticated store user.
+   *
+   * Security rules:
+   * - client must be ACTIVE (not suspended/expired/deleted)
+   * - current subscription must be ACTIVE or LIFETIME and within its grace window
+   * - the plan must allow desktop download (`allowsDesktopDownload` or the
+   *   `desktop_download` feature flag)
+   * - never exposes private storage paths; returns a configured public/signed URL
+   */
+  async getDesktopDownload(clientId: string) {
+    const client = await this.prisma.client.findFirst({
+      where: { id: clientId, deletedAt: null },
+      select: { id: true, status: true, businessType: true },
+    });
+    if (!client) {
+      throw new NotFoundException({ message: 'Client not found', code: 'CLIENT_NOT_FOUND' });
+    }
+    if (client.status !== ClientStatus.ACTIVE) {
+      throw new ForbiddenException({
+        message: 'Your account is not active. Desktop download is unavailable.',
+        code: 'DESKTOP_DOWNLOAD_CLIENT_INACTIVE',
+      });
+    }
+
+    const sub = await this.prisma.subscription.findFirst({
+      where: {
+        clientId,
+        status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.LIFETIME] },
+      },
+      orderBy: { updatedAt: 'desc' },
+      include: { plan: true },
+    });
+    if (!sub) {
+      throw new ForbiddenException({
+        message: 'No active subscription found. Desktop download is unavailable.',
+        code: 'DESKTOP_DOWNLOAD_NO_SUBSCRIPTION',
+      });
+    }
+    if (licenseLockUnixMs(sub.expiresAt, sub.graceDays) <= Date.now()) {
+      throw new ForbiddenException({
+        message: 'Your subscription has expired. Renew to download the desktop app.',
+        code: 'DESKTOP_DOWNLOAD_SUBSCRIPTION_EXPIRED',
+      });
+    }
+
+    const features = parseEnabledFeatures(sub.plan.features);
+    const allowed = sub.plan.allowsDesktopDownload || features.desktop_download === true;
+    if (!allowed) {
+      throw new ForbiddenException({
+        message: 'Your plan does not include the desktop app. Upgrade or buy a Desktop Lifetime package.',
+        code: 'DESKTOP_DOWNLOAD_NOT_IN_PLAN',
+      });
+    }
+
+    // One installer for all business types — the license decides which modules
+    // are enabled. A per-type URL can override via env when needed.
+    const typeKey = client.businessType ?? 'RETAIL';
+    const url =
+      process.env[`DESKTOP_INSTALLER_URL_${typeKey}`] ||
+      process.env.DESKTOP_INSTALLER_URL ||
+      null;
+
+    await this.audit.log({
+      userId: null,
+      clientId,
+      action: 'license.desktop.download',
+      entity: 'Client',
+      entityId: clientId,
+      newValue: { businessType: typeKey, planCode: sub.plan.code, installerConfigured: Boolean(url) },
+    });
+
+    if (!url) {
+      return {
+        available: false,
+        message: 'Desktop installer is not available yet.',
+        businessType: client.businessType,
+        planCode: sub.plan.code,
+        maxDevices: sub.maxDevices,
+      };
+    }
+
+    return {
+      available: true,
+      downloadUrl: url,
+      businessType: client.businessType,
+      planCode: sub.plan.code,
+      maxDevices: sub.maxDevices,
+    };
   }
 }

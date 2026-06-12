@@ -90,8 +90,13 @@ export class ActivationService {
         if (client.deletedAt) this.reject('client_deleted');
         if (client.status !== ClientStatus.ACTIVE) this.reject('client_inactive');
 
+        // Lifetime desktop purchases use SubscriptionStatus.LIFETIME — they are
+        // just as activatable as ACTIVE subscriptions (device limit still applies).
         const subscription = await tx.subscription.findFirst({
-          where: { clientId: code.clientId, status: SubscriptionStatus.ACTIVE },
+          where: {
+            clientId: code.clientId,
+            status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.LIFETIME] },
+          },
           orderBy: { expiresAt: 'desc' },
         });
         if (!subscription) this.reject('no_active_subscription');
@@ -104,15 +109,19 @@ export class ActivationService {
         });
         if (existingDev?.isActive === false) this.reject('device_revoked');
 
-        const activeOthers = await tx.device.count({
-          where: {
-            clientId: code.clientId,
-            isActive: true,
-            ...(existingDev?.isActive ? { NOT: { id: existingDev.id } } : {}),
-          },
-        });
-        if (!existingDev?.isActive && activeOthers >= subscription.maxDevices) {
-          this.reject('device_limit');
+        // maxDevices null = unlimited (Desktop Lifetime). Devices are still
+        // created (audit/tracking) and remain bound to this client only.
+        if (subscription.maxDevices != null) {
+          const activeOthers = await tx.device.count({
+            where: {
+              clientId: code.clientId,
+              isActive: true,
+              ...(existingDev?.isActive ? { NOT: { id: existingDev.id } } : {}),
+            },
+          });
+          if (!existingDev?.isActive && activeOthers >= subscription.maxDevices) {
+            this.reject('device_limit');
+          }
         }
 
         const device = existingDev

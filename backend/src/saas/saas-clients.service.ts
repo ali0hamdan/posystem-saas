@@ -152,6 +152,7 @@ export class SaasClientsService {
           email: true,
           phone: true,
           status: true,
+          businessType: true,
           notes: true,
           supportNotes: true,
           deletedAt: true,
@@ -174,10 +175,21 @@ export class SaasClientsService {
   }
 
   private async getCurrentSubscription(clientId: string) {
+    const planSelect = {
+      id: true,
+      code: true,
+      name: true,
+      type: true,
+      businessType: true,
+      allowsDesktopDownload: true,
+    } as const;
     const active = await this.prisma.subscription.findFirst({
-      where: { clientId, status: SubscriptionStatus.ACTIVE },
+      where: {
+        clientId,
+        status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.LIFETIME] },
+      },
       orderBy: { expiresAt: 'desc' },
-      include: { plan: { select: { id: true, code: true, name: true } } },
+      include: { plan: { select: planSelect } },
     });
     if (active) {
       return active;
@@ -185,7 +197,7 @@ export class SaasClientsService {
     return this.prisma.subscription.findFirst({
       where: { clientId },
       orderBy: { createdAt: 'desc' },
-      include: { plan: { select: { id: true, code: true, name: true } } },
+      include: { plan: { select: planSelect } },
     });
   }
 
@@ -200,6 +212,7 @@ export class SaasClientsService {
         email: true,
         phone: true,
         status: true,
+        businessType: true,
         notes: true,
         supportNotes: true,
         deletedAt: true,
@@ -236,6 +249,8 @@ export class SaasClientsService {
         ? {
             id: currentSubscription.id,
             status: currentSubscription.status,
+            billingCycle: currentSubscription.billingCycle,
+            isLifetime: currentSubscription.status === SubscriptionStatus.LIFETIME,
             startsAt: currentSubscription.startsAt.toISOString(),
             expiresAt: currentSubscription.expiresAt?.toISOString() ?? null,
             maxUsers: currentSubscription.maxUsers,
@@ -463,7 +478,10 @@ export class SaasClientsService {
 
   private async getPrimarySubscriptionForClient(clientId: string) {
     const active = await this.prisma.subscription.findFirst({
-      where: { clientId, status: SubscriptionStatus.ACTIVE },
+      where: {
+        clientId,
+        status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.LIFETIME] },
+      },
       orderBy: { expiresAt: 'desc' },
       include: { plan: true },
     });
@@ -551,6 +569,8 @@ export class SaasClientsService {
     if (nextActiveCountDelta === 0) return;
     const sub = await this.getPrimarySubscriptionForClient(clientId);
     if (!sub) return;
+    // maxUsers null = unlimited (Desktop Lifetime).
+    if (sub.maxUsers == null) return;
     const activeUsers = await tx.user.count({ where: { clientId, isActive: true } });
     if (activeUsers + nextActiveCountDelta > sub.maxUsers) {
       throw new BadRequestException({
@@ -1396,6 +1416,7 @@ export class SaasClientsService {
         ...(dto.ownerName !== undefined ? { ownerName: dto.ownerName.trim() } : {}),
         ...(dto.email !== undefined ? { email: dto.email.trim().toLowerCase() } : {}),
         ...(dto.phone !== undefined ? { phone: dto.phone?.trim() || null } : {}),
+        ...(dto.businessType !== undefined ? { businessType: dto.businessType } : {}),
         ...(dto.notes !== undefined ? { notes: dto.notes?.trim() || null } : {}),
         ...(dto.supportNotes !== undefined ? { supportNotes: dto.supportNotes?.trim() || null } : {}),
       };

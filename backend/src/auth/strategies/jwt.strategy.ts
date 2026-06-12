@@ -52,6 +52,14 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       });
     }
 
-    return sanitizeUser(user);
+    // Latest subscription drives the subscription-enforcement interceptor.
+    // Prefer an ACTIVE/LIFETIME/TRIALING row; fall back to most-recent.
+    const sub = await this.prisma.subscription.findFirst({
+      where: { clientId: user.clientId },
+      orderBy: [{ updatedAt: 'desc' }],
+      select: { status: true },
+    });
+
+    return sanitizeUser(user, { subscriptionStatus: sub?.status ?? null });
   }
 }

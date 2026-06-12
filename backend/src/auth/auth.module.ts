@@ -9,9 +9,13 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { BranchScopeService } from '../branch/branch-scope.service';
+import { OtpModule } from '../otp/otp.module';
+import { SalesmanIdModule } from '../users/salesman-id.module';
 
 @Module({
   imports: [
+    OtpModule,
+    SalesmanIdModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],

@@ -19,8 +19,9 @@ export type LicenseSurfacePayload = {
   expiresAt: string | null;
   daysRemaining: number | null;
   graceRemaining: number;
-  maxUsers: number;
-  maxBranches: number;
-  maxDevices: number;
+  /** Null = unlimited (Desktop Lifetime plans). */
+  maxUsers: number | null;
+  maxBranches: number | null;
+  maxDevices: number | null;
   enabledFeatures: Record<string, boolean>;
 };

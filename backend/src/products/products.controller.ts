@@ -156,7 +156,7 @@ export class ProductsController {
 
   @Get('generate-sku')
 
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
 
   async generateSku(
 
@@ -186,7 +186,7 @@ export class ProductsController {
 
   @Post('generate-barcode')
 
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
 
   async generateBarcode(@CurrentUser() user: SafeUser) {
 
@@ -200,7 +200,7 @@ export class ProductsController {
 
   @Get('check-barcode')
 
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
 
   async checkBarcode(
 
@@ -246,7 +246,7 @@ export class ProductsController {
 
   @Post()
 
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
 
   async create(
 
@@ -268,7 +268,7 @@ export class ProductsController {
 
   @Patch(':id')
 
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
 
   async update(
 
@@ -292,7 +292,7 @@ export class ProductsController {
 
   @Delete(':id')
 
-  @Roles(UserRole.OWNER, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
 
   async remove(
 

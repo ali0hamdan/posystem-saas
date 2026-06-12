@@ -3,6 +3,7 @@ import { resolve } from 'path';
 import { hash } from 'bcrypt';
 import {
   BillingCycle,
+  BusinessType,
   ClientStatus,
   LicensePlan,
   PlanType,
@@ -502,7 +503,8 @@ async function seedSaasPlatformAdmin(): Promise<void> {
   }
 }
 
-// Feature flag sets per plan
+// Feature flag sets per plan. F&B keys default to false on STARTER and are
+// upgraded per tier so the F&B module is usable only on plans that include it.
 const STARTER_FEATURES = {
   products: true,
   sales: true,
@@ -520,6 +522,27 @@ const STARTER_FEATURES = {
   desktop_download: false,
   user_management: true,
   coupon_management: false,
+  // F&B
+  fnb_module: false,
+  table_management: false,
+  kitchen_display: false,
+  recipe_inventory: false,
+  delivery_management: false,
+  reservations: false,
+  split_billing: false,
+  multi_printer_routing: false,
+  // Wholesale / B2B
+  wholesale_module: false,
+  quotations: false,
+  proforma_invoices: false,
+  official_invoices: false,
+  bulk_pricing: false,
+  customer_credit: false,
+  payment_terms: false,
+  delivery_notes: false,
+  stock_reservations: false,
+  customer_statements: false,
+  approval_workflow: false,
 };
 
 const BUSINESS_FEATURES = {
@@ -530,6 +553,22 @@ const BUSINESS_FEATURES = {
   customer_debt: true,
   basic_reports: true,
   coupon_management: true,
+  // F&B base set on BUSINESS so restaurants can adopt without PRO.
+  fnb_module: true,
+  table_management: true,
+  kitchen_display: true,
+  reservations: true,
+  split_billing: true,
+  // Wholesale / B2B available from BUSINESS up.
+  wholesale_module: true,
+  quotations: true,
+  proforma_invoices: true,
+  official_invoices: true,
+  bulk_pricing: true,
+  customer_credit: true,
+  payment_terms: true,
+  delivery_notes: true,
+  customer_statements: true,
 };
 
 const PRO_FEATURES = {
@@ -540,6 +579,13 @@ const PRO_FEATURES = {
   offline_mode: true,
   barcode_labels: true,
   desktop_download: true,
+  // Full F&B on PRO.
+  recipe_inventory: true,
+  delivery_management: true,
+  multi_printer_routing: true,
+  // Full wholesale on PRO.
+  stock_reservations: true,
+  approval_workflow: true,
 };
 
 const LIFETIME_FEATURES = {
@@ -559,6 +605,90 @@ const LIFETIME_FEATURES = {
   desktop_download: true,
   user_management: true,
   coupon_management: false,
+  // F&B retail-leaning lifetime: kitchen+menu, no delivery/recipe.
+  fnb_module: true,
+  table_management: true,
+  kitchen_display: true,
+  recipe_inventory: false,
+  delivery_management: false,
+  reservations: false,
+  split_billing: true,
+  multi_printer_routing: false,
+  // Lifetime wholesale bundle: core documents, no reservations/approval.
+  wholesale_module: true,
+  quotations: true,
+  proforma_invoices: true,
+  official_invoices: true,
+  bulk_pricing: true,
+  customer_credit: true,
+  payment_terms: true,
+  delivery_notes: false,
+  stock_reservations: false,
+  customer_statements: true,
+  approval_workflow: false,
+};
+
+// ---------------------------------------------------------------------------
+// Business-type-specific Desktop Lifetime feature sets. One-time desktop
+// license = unlimited desktop use with ALL features for the selected business
+// type — but never the other verticals' modules.
+// ---------------------------------------------------------------------------
+
+/** All vertical-agnostic (core) features, fully enabled. */
+const CORE_FULL_FEATURES = {
+  products: true,
+  sales: true,
+  receipt_printing: true,
+  basic_reports: true,
+  advanced_reports: true,
+  stock_management: true,
+  purchase_orders: true,
+  suppliers: true,
+  customer_debt: true,
+  multi_branch: true,
+  stock_transfers: true,
+  offline_mode: true,
+  barcode_labels: true,
+  desktop_download: true,
+  user_management: true,
+  coupon_management: true,
+};
+
+const RETAIL_DESKTOP_LIFETIME_FEATURES = {
+  ...STARTER_FEATURES,
+  ...CORE_FULL_FEATURES,
+  // Retail only — no F&B, no Wholesale modules.
+};
+
+const FNB_DESKTOP_LIFETIME_FEATURES = {
+  ...STARTER_FEATURES,
+  ...CORE_FULL_FEATURES,
+  // Full F&B module — no Wholesale.
+  fnb_module: true,
+  table_management: true,
+  kitchen_display: true,
+  recipe_inventory: true,
+  delivery_management: true,
+  reservations: true,
+  split_billing: true,
+  multi_printer_routing: true,
+};
+
+const WHOLESALE_DESKTOP_LIFETIME_FEATURES = {
+  ...STARTER_FEATURES,
+  ...CORE_FULL_FEATURES,
+  // Full Wholesale / B2B module — no F&B.
+  wholesale_module: true,
+  quotations: true,
+  proforma_invoices: true,
+  official_invoices: true,
+  bulk_pricing: true,
+  customer_credit: true,
+  payment_terms: true,
+  delivery_notes: true,
+  stock_reservations: true,
+  customer_statements: true,
+  approval_workflow: true,
 };
 
 async function seedPlans(): Promise<void> {
@@ -567,13 +697,15 @@ async function seedPlans(): Promise<void> {
     name: string;
     description: string;
     type: PlanType;
+    businessType: BusinessType | null;
     monthlyPrice: string | null;
     yearlyPrice: string | null;
     oneTimePrice: string | null;
     currency: string;
-    maxUsers: number;
-    maxBranches: number;
-    maxDevices: number;
+    /** Null = unlimited (Desktop Lifetime plans). */
+    maxUsers: number | null;
+    maxBranches: number | null;
+    maxDevices: number | null;
     features: Record<string, boolean>;
     allowsDesktopDownload: boolean;
     isActive: boolean;
@@ -586,6 +718,7 @@ async function seedPlans(): Promise<void> {
       name: 'Starter',
       description: 'Perfect for small shops getting started.',
       type: PlanType.SUBSCRIPTION,
+      businessType: null,
       monthlyPrice: '29.00',
       yearlyPrice: '290.00',
       oneTimePrice: null,
@@ -603,6 +736,7 @@ async function seedPlans(): Promise<void> {
       name: 'Business',
       description: 'For growing businesses with full inventory management.',
       type: PlanType.SUBSCRIPTION,
+      businessType: null,
       monthlyPrice: '59.00',
       yearlyPrice: '590.00',
       oneTimePrice: null,
@@ -620,6 +754,7 @@ async function seedPlans(): Promise<void> {
       name: 'Pro',
       description: 'Multi-branch, advanced reports, and offline POS.',
       type: PlanType.SUBSCRIPTION,
+      businessType: null,
       monthlyPrice: '99.00',
       yearlyPrice: '990.00',
       oneTimePrice: null,
@@ -633,10 +768,14 @@ async function seedPlans(): Promise<void> {
       sortOrder: 3,
     },
     {
+      // Legacy generic lifetime plan — superseded by the business-type-specific
+      // Desktop Lifetime plans below. Kept (inactive) so existing subscriptions
+      // and activation codes referencing it keep working.
       code: LicensePlan.LIFETIME_DESKTOP,
       name: 'Lifetime Desktop',
       description: 'One-time payment. Own it forever. Desktop POS included.',
       type: PlanType.ONE_TIME,
+      businessType: null,
       monthlyPrice: null,
       yearlyPrice: null,
       oneTimePrice: '499.00',
@@ -646,8 +785,85 @@ async function seedPlans(): Promise<void> {
       maxDevices: 2,
       features: LIFETIME_FEATURES,
       allowsDesktopDownload: true,
-      isActive: true,
+      isActive: false,
       sortOrder: 4,
+    },
+    {
+      code: LicensePlan.RETAIL_DESKTOP_LIFETIME,
+      name: 'Retail Desktop Lifetime',
+      description:
+        'One-time desktop license. Unlimited desktop use for your retail POS — download and activate your POS desktop app.',
+      type: PlanType.ONE_TIME,
+      businessType: BusinessType.RETAIL,
+      monthlyPrice: null,
+      yearlyPrice: null,
+      oneTimePrice: '999.00',
+      currency: 'USD',
+      maxUsers: null,
+      maxBranches: null,
+      maxDevices: null,
+      features: RETAIL_DESKTOP_LIFETIME_FEATURES,
+      allowsDesktopDownload: true,
+      isActive: true,
+      sortOrder: 5,
+    },
+    {
+      code: LicensePlan.FNB_DESKTOP_LIFETIME,
+      name: 'F&B Desktop Lifetime',
+      description:
+        'One-time desktop license. Unlimited desktop use for your restaurant POS (tables, menu, orders, kitchen) — download and activate your POS desktop app.',
+      type: PlanType.ONE_TIME,
+      businessType: BusinessType.FOOD_BEVERAGE,
+      monthlyPrice: null,
+      yearlyPrice: null,
+      oneTimePrice: '999.00',
+      currency: 'USD',
+      maxUsers: null,
+      maxBranches: null,
+      maxDevices: null,
+      features: FNB_DESKTOP_LIFETIME_FEATURES,
+      allowsDesktopDownload: true,
+      isActive: true,
+      sortOrder: 6,
+    },
+    {
+      code: LicensePlan.WHOLESALE_DESKTOP_LIFETIME,
+      name: 'Wholesale Desktop Lifetime',
+      description:
+        'One-time desktop license. Unlimited desktop use for your wholesale POS (quotations, proforma & official invoices, bulk pricing) — download and activate your POS desktop app.',
+      type: PlanType.ONE_TIME,
+      businessType: BusinessType.WHOLESALE,
+      monthlyPrice: null,
+      yearlyPrice: null,
+      oneTimePrice: '999.00',
+      currency: 'USD',
+      maxUsers: null,
+      maxBranches: null,
+      maxDevices: null,
+      features: WHOLESALE_DESKTOP_LIFETIME_FEATURES,
+      allowsDesktopDownload: true,
+      isActive: true,
+      sortOrder: 7,
+    },
+    {
+      // Hybrid Desktop Lifetime is no longer offered. Kept (inactive) so the
+      // enum value and any old records remain valid.
+      code: LicensePlan.HYBRID_DESKTOP_LIFETIME,
+      name: 'Hybrid Desktop Lifetime (discontinued)',
+      description: 'Discontinued — no longer offered.',
+      type: PlanType.ONE_TIME,
+      businessType: BusinessType.HYBRID,
+      monthlyPrice: null,
+      yearlyPrice: null,
+      oneTimePrice: '999.00',
+      currency: 'USD',
+      maxUsers: 8,
+      maxBranches: 2,
+      maxDevices: 4,
+      features: STARTER_FEATURES,
+      allowsDesktopDownload: true,
+      isActive: false,
+      sortOrder: 8,
     },
   ];
 
@@ -656,6 +872,7 @@ async function seedPlans(): Promise<void> {
       name: plan.name,
       description: plan.description,
       type: plan.type,
+      businessType: plan.businessType,
       monthlyPrice: plan.monthlyPrice ? new Prisma.Decimal(plan.monthlyPrice) : null,
       yearlyPrice: plan.yearlyPrice ? new Prisma.Decimal(plan.yearlyPrice) : null,
       oneTimePrice: plan.oneTimePrice ? new Prisma.Decimal(plan.oneTimePrice) : null,

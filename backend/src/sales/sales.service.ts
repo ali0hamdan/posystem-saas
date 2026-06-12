@@ -1,7 +1,8 @@
-import {
+﻿import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -9,11 +10,13 @@ import {
   PaymentMethod,
   PaymentStatus,
   Prisma,
+  RefundSourceType,
   SaleStatus,
   ShiftStatus,
   StockMovementType,
   UserRole,
   CustomerLedgerType,
+  RestockAction,
 } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -25,6 +28,9 @@ import { CreateRefundDto } from './dto/create-refund.dto';
 import { ListSalesQueryDto } from './dto/list-sales.query.dto';
 import { SafeUser } from '../auth/types/safe-user.type';
 import { CustomerLedgerService } from '../customers/customer-ledger.service';
+import { NotificationService } from '../notifications/notification.service';
+import { RefundService } from '../refunds/refund.service';
+import { SalesCommissionService } from '../commissions/sales-commission.service';
 
 type ComputedLine = {
   productId: string;
@@ -59,12 +65,17 @@ function maxDec(a: Prisma.Decimal, b: Prisma.Decimal): Prisma.Decimal {
 
 @Injectable()
 export class SalesService {
+  private readonly logger = new Logger(SalesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly stockService: StockService,
     private readonly audit: AuditLogService,
     private readonly settingsService: SettingsService,
     private readonly customerLedger: CustomerLedgerService,
+    private readonly notifications: NotificationService,
+    private readonly refunds: RefundService,
+    private readonly commissions: SalesCommissionService,
   ) {}
 
   private buildInvoiceNumber(): string {
@@ -117,7 +128,8 @@ export class SalesService {
           code: 'INVALID_PRODUCT',
         });
       }
-      const unitPrice = d(p.sellingPrice.toString());
+      const unitPrice =
+        line.unitPrice != null ? d(line.unitPrice) : d(p.sellingPrice.toString());
       const costPriceAtSale = d(p.costPrice.toString());
       const lineGross = unitPrice.mul(line.quantity);
       const rawDisc = d(line.discount ?? 0);
@@ -206,7 +218,8 @@ export class SalesService {
     return { createdAt: { lte: toEnd } };
   }
 
-  async create(dto: CreateSaleDto, cashierId: string, branchId: string, clientId: string) {
+  async create(dto: CreateSaleDto, actor: SafeUser, branchId: string, clientId: string) {
+    const cashierId = actor.id;
     const payments = dto.payments ?? [];
 
     if (!dto.items?.length) {
@@ -379,6 +392,10 @@ export class SalesService {
     }
 
     const invoiceNumber = this.buildInvoiceNumber();
+    const salesmanId = await this.commissions.resolveSalesmanForSale(actor, clientId, {
+      salesmanId: dto.salesmanId,
+      salesmanIdCode: dto.salesmanIdCode,
+    });
 
     const result = await this.prisma.$transaction(async (tx) => {
       const openShift = await tx.shift.findFirst({
@@ -392,6 +409,8 @@ export class SalesService {
           branchId,
           invoiceNumber,
           cashierId,
+          createdByUserId: actor.id,
+          salesmanId,
           customerId: dto.customerId ?? null,
           shiftId: openShift?.id ?? null,
           couponId: resolvedCouponId,
@@ -445,7 +464,7 @@ export class SalesService {
           amount: receivableFromSale,
           referenceType: 'sale',
           referenceId: sale.id,
-          note: `Sale ${invoiceNumber} — on account`,
+          note: `Sale ${invoiceNumber} â€” on account`,
           createdById: cashierId,
         });
       }
@@ -501,39 +520,33 @@ export class SalesService {
       },
     });
 
+    void this.notifications
+      .notifyPurchaseCompleted({
+        clientId,
+        invoiceNumber: result.invoiceNumber,
+        total: result.total.toString(),
+        customerName: result.customer?.name ?? null,
+        paymentMethod: result.payments.map((p) => p.method).join(', ') || null,
+        branchName: result.branch?.name ?? null,
+        createdByName: result.cashier?.name ?? null,
+        linkPath: '/sales',
+      })
+      .catch((err) =>
+        this.logger.warn(`Purchase notification failed: ${(err as Error).message}`),
+      );
+
+    if (result.paymentStatus === PaymentStatus.PAID) {
+      void this.commissions
+        .calculateCommissionForSale(result.id, clientId)
+        .catch((err) =>
+          this.logger.warn(`Commission calculation failed: ${(err as Error).message}`),
+        );
+    }
+
     return result;
   }
 
-  private refundLineAmount(
-    saleItem: { total: Prisma.Decimal; quantity: number },
-    refundQty: number,
-  ): Prisma.Decimal {
-    if (refundQty <= 0 || saleItem.quantity <= 0) {
-      return d0();
-    }
-    if (refundQty === saleItem.quantity) {
-      return d(saleItem.total.toString());
-    }
-    return saleItem.total.mul(refundQty).div(saleItem.quantity);
-  }
-
   async createRefund(saleId: string, dto: CreateRefundDto, user: SafeUser) {
-    const trimmedReason = dto.reason.trim();
-    if (!trimmedReason) {
-      throw new BadRequestException({
-        message: 'reason is required',
-        code: 'REASON_REQUIRED',
-      });
-    }
-
-    const useFull = dto.full === true;
-    if (!useFull && (!dto.items || dto.items.length === 0)) {
-      throw new BadRequestException({
-        message: 'Provide items for a partial refund or set full to true',
-        code: 'REFUND_ITEMS_OR_FULL',
-      });
-    }
-
     const saleHead = await this.prisma.sale.findFirst({
       where: { id: saleId, clientId: user.clientId },
       select: { branchId: true },
@@ -543,215 +556,24 @@ export class SalesService {
     }
     await this.assertCanAccessBranchForMutation(user, saleHead.branchId);
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      const sale = await tx.sale.findFirst({
-        where: { id: saleId, clientId: user.clientId },
-        include: { items: true },
-      });
-
-      if (!sale) {
-        throw new NotFoundException({ message: 'Sale not found', code: 'SALE_NOT_FOUND' });
-      }
-
-      if (sale.status === SaleStatus.CANCELLED) {
-        throw new BadRequestException({
-          message: 'Cannot refund a cancelled sale',
-          code: 'SALE_CANCELLED',
-        });
-      }
-
-      if (sale.status === SaleStatus.REFUNDED) {
-        throw new BadRequestException({
-          message: 'Sale is already fully refunded',
-          code: 'ALREADY_REFUNDED',
-        });
-      }
-
-      if (!sale.items.length) {
-        throw new BadRequestException({
-          message: 'Sale has no line items',
-          code: 'SALE_EMPTY',
-        });
-      }
-
-      const aggRows = await tx.refundItem.groupBy({
-        by: ['saleItemId'],
-        where: { refund: { saleId: sale.id } },
-        _sum: { quantity: true },
-      });
-
-      const refundedQtyBySaleItem = new Map<string, number>();
-      for (const row of aggRows) {
-        refundedQtyBySaleItem.set(row.saleItemId, row._sum.quantity ?? 0);
-      }
-
-      const saleItemById = new Map(sale.items.map((i) => [i.id, i]));
-
-      type ResolvedLine = { saleItem: (typeof sale.items)[number]; quantity: number };
-      const resolved: ResolvedLine[] = [];
-
-      if (useFull) {
-        for (const si of sale.items) {
-          const already = refundedQtyBySaleItem.get(si.id) ?? 0;
-          const remaining = si.quantity - already;
-          if (remaining > 0) {
-            resolved.push({ saleItem: si, quantity: remaining });
-          }
-        }
-        if (!resolved.length) {
-          throw new BadRequestException({
-            message: 'Nothing left to refund on this sale',
-            code: 'NOTHING_TO_REFUND',
-          });
-        }
-      } else {
-        const merged = new Map<string, number>();
-        for (const line of dto.items!) {
-          merged.set(line.saleItemId, (merged.get(line.saleItemId) ?? 0) + line.quantity);
-        }
-
-        for (const [saleItemId, qty] of merged) {
-          const si = saleItemById.get(saleItemId);
-          if (!si) {
-            throw new BadRequestException({
-              message: 'Sale line does not belong to this sale',
-              code: 'INVALID_SALE_ITEM',
-              details: { saleItemId },
-            });
-          }
-          const already = refundedQtyBySaleItem.get(si.id) ?? 0;
-          const remaining = si.quantity - already;
-          if (qty > remaining) {
-            throw new BadRequestException({
-              message: 'Refund quantity exceeds remaining quantity for this line',
-              code: 'REFUND_EXCEEDS_REMAINING',
-              details: { saleItemId, requested: qty, remaining },
-            });
-          }
-          resolved.push({ saleItem: si, quantity: qty });
-        }
-      }
-
-      let totalRefunded = d0();
-      for (const { saleItem, quantity } of resolved) {
-        totalRefunded = totalRefunded.add(this.refundLineAmount(saleItem, quantity));
-      }
-
-      const refund = await tx.refund.create({
-        data: {
-          clientId: sale.clientId,
-          saleId: sale.id,
-          userId: user.id,
-          reason: trimmedReason,
-          totalRefunded,
-        },
-      });
-
-      for (const { saleItem, quantity } of resolved) {
-        const lineAmount = this.refundLineAmount(saleItem, quantity);
-        await tx.refundItem.create({
-          data: {
-            refundId: refund.id,
-            saleItemId: saleItem.id,
-            quantity,
-            amount: lineAmount,
-          },
-        });
-
-        await this.stockService.adjustStock(
-          {
-            clientId: sale.clientId,
-            branchId: sale.branchId,
-            productId: saleItem.productId,
-            quantityChange: quantity,
-            type: StockMovementType.RETURN,
-            reason: `Refund ${sale.invoiceNumber}: ${trimmedReason}`,
-            createdById: user.id,
-            referenceType: 'refund',
-            referenceId: refund.id,
-            allowNegativeStock: false,
-          },
-          tx,
-        );
-      }
-
-      const refundAdds = new Map<string, number>();
-      for (const r of resolved) {
-        refundAdds.set(r.saleItem.id, (refundAdds.get(r.saleItem.id) ?? 0) + r.quantity);
-      }
-
-      const allLinesFullyReturned = sale.items.every((si) => {
-        const already = refundedQtyBySaleItem.get(si.id) ?? 0;
-        const add = refundAdds.get(si.id) ?? 0;
-        return already + add >= si.quantity;
-      });
-
-      const newStatus = allLinesFullyReturned
-        ? SaleStatus.REFUNDED
-        : SaleStatus.PARTIALLY_REFUNDED;
-
-      await tx.sale.update({
-        where: { id: sale.id },
-        data: { status: newStatus },
-      });
-
-      if (sale.customerId && totalRefunded.gt(0)) {
-        await this.customerLedger.appendEntry(tx, {
-          clientId: sale.clientId,
-          customerId: sale.customerId,
-          type: CustomerLedgerType.REFUND,
-          amount: d(0).sub(totalRefunded),
-          referenceType: 'refund',
-          referenceId: refund.id,
-          note: `Refund ${sale.invoiceNumber}: ${trimmedReason}`,
-          createdById: user.id,
-        });
-      }
-
-      return tx.refund.findUnique({
-        where: { id: refund.id },
-        include: {
-          items: {
-            include: {
-              saleItem: {
-                include: {
-                  product: { select: { id: true, name: true, sku: true, barcode: true } },
-                },
-              },
-            },
-          },
-          sale: {
-            select: { id: true, invoiceNumber: true, status: true, total: true },
-          },
-          user: {
-            select: { id: true, username: true, name: true, role: true },
-          },
-        },
-      });
-    });
-
-    if (!result) {
-      throw new BadRequestException({
-        message: 'Refund not found after create',
-        code: 'REFUND_CREATE_FAILED',
-      });
-    }
-
-    await this.audit.log({
-      userId: user.id,
-      action: 'sale.refund',
-      entity: 'Refund',
-      entityId: result.id,
-      newValue: {
-        saleId: result.saleId,
-        invoiceNumber: result.sale.invoiceNumber,
-        totalRefunded: result.totalRefunded.toString(),
-        reason: trimmedReason,
-        saleStatus: result.sale.status,
+    return this.refunds.refundSale(
+      saleId,
+      {
+        reason: dto.reason,
+        approvalIdCode: dto.approvalIdCode,
+        nfcCardUid: dto.nfcCardUid,
+        approvalPin: dto.approvalPin,
+        full: dto.full,
+        sourceType: RefundSourceType.RETAIL_SALE, // resolved inside refundSale
+        sourceId: saleId,
+        items: dto.items?.map((line) => ({
+          sourceItemId: line.saleItemId,
+          quantity: line.quantity,
+          restockAction: RestockAction.RESTOCK,
+        })),
       },
-    });
-
-    return result;
+      user,
+    );
   }
 
   async findAll(user: SafeUser, query: ListSalesQueryDto, branchId: string) {
@@ -798,6 +620,9 @@ export class SalesService {
           cashier: {
             select: { id: true, username: true, name: true, role: true },
           },
+          salesman: {
+            select: { id: true, name: true, username: true, salesmanIdCode: true },
+          },
           _count: { select: { items: true, payments: true } },
         },
       }),
@@ -830,7 +655,16 @@ export class SalesService {
         refunds: {
           orderBy: { createdAt: 'desc' },
           include: {
-            items: { select: { saleItemId: true, quantity: true, amount: true } },
+            items: {
+              select: {
+                saleItemId: true,
+                sourceItemId: true,
+                quantity: true,
+                amount: true,
+                restockAction: true,
+                itemNameSnapshot: true,
+              },
+            },
             user: { select: { id: true, name: true, username: true, role: true } },
           },
         },
@@ -838,6 +672,12 @@ export class SalesService {
         shift: { select: { id: true, openedAt: true, status: true } },
         cashier: {
           select: { id: true, username: true, name: true, role: true },
+        },
+        createdBy: {
+          select: { id: true, username: true, name: true, role: true },
+        },
+        salesman: {
+          select: { id: true, username: true, name: true, role: true, salesmanIdCode: true },
         },
       },
     });
@@ -876,6 +716,12 @@ export class SalesService {
         shift: { select: { id: true, openedAt: true, status: true } },
         cashier: {
           select: { id: true, username: true, name: true, role: true },
+        },
+        createdBy: {
+          select: { id: true, username: true, name: true, role: true },
+        },
+        salesman: {
+          select: { id: true, username: true, name: true, role: true, salesmanIdCode: true },
         },
       },
     });

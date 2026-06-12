@@ -12,11 +12,15 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-import { LicensePlan, PlanType } from '@prisma/client';
+import { BusinessType, LicensePlan, PlanType } from '@prisma/client';
 
 export class CreateSaasPlanDto {
   @IsEnum(LicensePlan)
   code!: LicensePlan;
+
+  @IsOptional()
+  @IsEnum(BusinessType)
+  businessType?: BusinessType;
 
   @IsString()
   @MinLength(1)
@@ -55,23 +59,27 @@ export class CreateSaasPlanDto {
   @MaxLength(8)
   currency?: string;
 
+  /** Omit for unlimited (Desktop Lifetime plans). */
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(100_000)
-  maxUsers!: number;
+  maxUsers?: number;
 
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(10_000)
-  maxBranches!: number;
+  maxBranches?: number;
 
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(100_000)
-  maxDevices!: number;
+  maxDevices?: number;
 
   @IsOptional()
   @IsObject()

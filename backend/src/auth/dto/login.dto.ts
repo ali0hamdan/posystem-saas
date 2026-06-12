@@ -1,7 +1,15 @@
-import { IsNotEmpty, IsOptional, IsString, MaxLength, MinLength, Matches } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+  Matches,
+} from 'class-validator';
 
 export class LoginDto {
-  /** When omitted, login succeeds only if the username is unique across all tenants. */
+  /** Tenant slug — required when the same email exists on multiple stores. */
   @IsOptional()
   @IsString()
   @MinLength(2)
@@ -11,11 +19,25 @@ export class LoginDto {
   })
   clientSlug?: string;
 
+  /** Primary login identity for new registrations (owner email). */
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(254)
+  email?: string;
+
+  /** Backward-compatible alias: email or legacy username. */
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @MinLength(1)
-  @MaxLength(64)
-  username!: string;
+  @MaxLength(254)
+  identifier?: string;
+
+  /** Legacy username login for existing users. */
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(254)
+  username?: string;
 
   @IsString()
   @IsNotEmpty()
