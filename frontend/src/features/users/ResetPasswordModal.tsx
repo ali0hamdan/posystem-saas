@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Modal } from '@/components/ui/Modal';
+import { PasswordInput } from '@/components/ui/password-input';
 import { getApiErrorMessage } from '@/api/client';
 import { updateUserPassword } from '@/api/users.api';
 
@@ -92,9 +93,8 @@ export function ResetPasswordModal({ userId, username, open, onClose }: ResetPas
           <label htmlFor="rp-new" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">
             New password
           </label>
-          <input
+          <PasswordInput
             id="rp-new"
-            type="password"
             autoComplete="new-password"
             className="w-full rounded-lg border border-line bg-canvas px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-500/25"
             {...form.register('newPassword')}
@@ -107,9 +107,8 @@ export function ResetPasswordModal({ userId, username, open, onClose }: ResetPas
           <label htmlFor="rp-confirm" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">
             Confirm password
           </label>
-          <input
+          <PasswordInput
             id="rp-confirm"
-            type="password"
             autoComplete="new-password"
             className="w-full rounded-lg border border-line bg-canvas px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-500/25"
             {...form.register('confirmPassword')}

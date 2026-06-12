@@ -23,8 +23,9 @@ export type ActivateLicenseResponse = {
   plan: string;
   expiresAt: string;
   graceDays: number;
-  maxBranches: number;
-  maxDevices: number;
+  /** Null = unlimited (Desktop Lifetime). */
+  maxBranches: number | null;
+  maxDevices: number | null;
   lexp: number;
 };
 
@@ -39,8 +40,8 @@ type ActivateDeviceApiResponse = {
   };
   subscriptionExpiresAt: string;
   graceDays: number;
-  maxDevices: number;
-  maxBranches: number;
+  maxDevices: number | null;
+  maxBranches: number | null;
   plan: string;
   lexp: number;
 };
@@ -179,6 +180,22 @@ export async function activateUnboundLicenseRequest(
 
 export async function pingLicense(): Promise<unknown> {
   const { data } = await api.post('/license/ping');
+  return data;
+}
+
+export type DesktopDownloadInfo = {
+  available: boolean;
+  downloadUrl?: string;
+  message?: string;
+  businessType: 'RETAIL' | 'FOOD_BEVERAGE' | 'WHOLESALE' | 'HYBRID';
+  planCode: string;
+  /** Null = unlimited devices (Desktop Lifetime). */
+  maxDevices: number | null;
+};
+
+/** Desktop installer info for the signed-in tenant (plan must include desktop_download). */
+export async function fetchDesktopDownload(): Promise<DesktopDownloadInfo> {
+  const { data } = await api.get<DesktopDownloadInfo>('/license/download-desktop');
   return data;
 }
 

@@ -142,7 +142,7 @@ export function SaasSubscriptionsPage() {
                         </span>
                       </Td>
                       <Td className="text-xs text-ink-muted">
-                        {s.maxUsers}u · {s.maxBranches}b · {s.maxDevices}d
+                        {s.maxUsers ?? '∞'}u · {s.maxBranches ?? '∞'}b · {s.maxDevices ?? '∞'}d
                       </Td>
                     </tr>
                   );

@@ -71,7 +71,7 @@ export async function renewClientSubscription(
 export async function changeClientPlan(
   clientId: string,
   body: { planCode: LicensePlanCode; graceDays?: number },
-): Promise<{ id: string; planCode: LicensePlanCode; maxUsers: number; maxBranches: number; maxDevices: number; graceDays: number }> {
+): Promise<{ id: string; planCode: LicensePlanCode; maxUsers: number | null; maxBranches: number | null; maxDevices: number | null; graceDays: number }> {
   const { data } = await saasApi.post(`/saas/clients/${clientId}/change-plan`, body);
   return data;
 }

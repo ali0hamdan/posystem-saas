@@ -10,7 +10,10 @@ export type ElectronUpdatePhase =
   | 'not-available'
   | 'downloading'
   | 'downloaded'
-  | 'error';
+  | 'error'
+  /** Updates were explicitly disabled — expired entitlement, misconfigured
+   *  publish URL, or `DESKTOP_DISABLE_UPDATES=1`. */
+  | 'disabled';
 
 export type ElectronUpdaterStatePayload = {
   phase: ElectronUpdatePhase;

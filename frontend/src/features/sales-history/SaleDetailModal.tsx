@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Printer } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -67,9 +68,10 @@ type SaleDetailModalProps = {
   onClose: () => void;
   canRefund: boolean;
   onRequestRefund: (sale: SaleDetail) => void;
+  onPrint?: () => void;
 };
 
-export function SaleDetailModal({ saleId, open, onClose, canRefund, onRequestRefund }: SaleDetailModalProps) {
+export function SaleDetailModal({ saleId, open, onClose, canRefund, onRequestRefund, onPrint }: SaleDetailModalProps) {
   const detailQuery = useQuery({
     queryKey: ['sale', saleId],
     queryFn: () => fetchSale(saleId as string),
@@ -94,15 +96,19 @@ export function SaleDetailModal({ saleId, open, onClose, canRefund, onRequestRef
       description={sale ? `Invoice ${sale.invoiceNumber}` : undefined}
       size="xl"
       footer={
-        showRefund && sale ? (
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="danger"
-              onClick={() => onRequestRefund(sale)}
-            >
-              Refund
-            </Button>
+        sale ? (
+          <div className="flex justify-end gap-2">
+            {onPrint ? (
+              <Button type="button" variant="secondary" onClick={onPrint}>
+                <Printer className="mr-2 h-4 w-4" />
+                Print
+              </Button>
+            ) : null}
+            {showRefund ? (
+              <Button type="button" variant="danger" onClick={() => onRequestRefund(sale)}>
+                Refund
+              </Button>
+            ) : null}
           </div>
         ) : undefined
       }

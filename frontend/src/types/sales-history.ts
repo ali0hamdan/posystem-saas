@@ -5,6 +5,12 @@ export type SaleLifecycleStatus = 'COMPLETED' | 'REFUNDED' | 'PARTIALLY_REFUNDED
 
 export type SaleListCustomer = { id: string; name: string; phone: string | null };
 export type SaleListCashier = { id: string; username: string; name: string; role: UserRole };
+export type SaleListSalesman = {
+  id: string;
+  name: string;
+  username: string;
+  salesmanIdCode: string | null;
+};
 
 export type SaleListRow = {
   id: string;
@@ -15,6 +21,7 @@ export type SaleListRow = {
   status: SaleLifecycleStatus;
   customer: SaleListCustomer | null;
   cashier: SaleListCashier;
+  salesman?: SaleListSalesman | null;
   _count?: { items: number; payments: number };
 };
 
@@ -98,6 +105,9 @@ export type ListSalesParams = {
 
 export type CreateRefundBody = {
   reason: string;
+  approvalIdCode?: string;
+  nfcCardUid?: string;
+  approvalPin?: string;
   full?: boolean;
   items?: { saleItemId: string; quantity: number }[];
 };

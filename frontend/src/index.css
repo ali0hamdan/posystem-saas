@@ -235,3 +235,346 @@
     page-break-inside: avoid;
   }
 }
+
+/* ----- B2B document print (A4) ----- */
+
+.b2b-print-page {
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.b2b-print-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.b2b-print-document {
+  background: #fff;
+  color: #111;
+  padding: 12mm 14mm;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.b2b-print-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  border-bottom: 2px solid #111;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+}
+
+.b2b-print-header-left {
+  display: flex;
+  gap: 0.75rem;
+  max-width: 55%;
+}
+
+.b2b-print-logo {
+  max-height: 56px;
+  max-width: 120px;
+  object-fit: contain;
+}
+
+.b2b-print-company-name {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+}
+
+.b2b-print-meta {
+  margin: 0.1rem 0;
+  color: #333;
+  font-size: 11px;
+}
+
+.b2b-print-header-right {
+  text-align: right;
+  min-width: 200px;
+}
+
+.b2b-print-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.b2b-print-subtitle {
+  margin: 0.2rem 0 0.5rem;
+  font-size: 11px;
+  font-weight: 600;
+  color: #444;
+  text-transform: uppercase;
+}
+
+.b2b-print-doc-number {
+  margin: 0 0 0.5rem;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.b2b-print-doc-meta {
+  margin: 0;
+  font-size: 11px;
+}
+
+.b2b-print-doc-meta div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin: 0.15rem 0;
+}
+
+.b2b-print-doc-meta dt {
+  color: #555;
+}
+
+.b2b-print-doc-meta dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.b2b-print-customer {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.b2b-print-customer h2 {
+  margin: 0 0 0.35rem;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #555;
+}
+
+.b2b-print-customer-name {
+  margin: 0;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.b2b-print-muted {
+  color: #666;
+  margin: 0;
+}
+
+.b2b-print-items {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  font-size: 11px;
+}
+
+.b2b-print-items th,
+.b2b-print-items td {
+  border: 1px solid #ccc;
+  padding: 0.35rem 0.45rem;
+  vertical-align: top;
+}
+
+.b2b-print-items th {
+  background: #f3f3f3;
+  font-weight: 700;
+  text-align: left;
+}
+
+.b2b-print-items .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.b2b-print-line-note {
+  font-size: 10px;
+  color: #555;
+  margin-top: 0.15rem;
+}
+
+.b2b-print-totals-wrap {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2rem;
+  margin-bottom: 1rem;
+}
+
+.b2b-print-totals {
+  min-width: 240px;
+  margin: 0;
+}
+
+.b2b-print-totals div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.2rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.b2b-print-totals dt {
+  color: #555;
+}
+
+.b2b-print-totals dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+}
+
+.b2b-print-total-row dd,
+.b2b-print-balance-row dd {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.b2b-print-payments ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1rem;
+  font-size: 11px;
+}
+
+.b2b-print-terms {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #ddd;
+  font-size: 11px;
+}
+
+.b2b-print-terms h3 {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.b2b-print-terms-body {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.b2b-print-ref {
+  margin: 0 0 0.35rem;
+  font-weight: 600;
+}
+
+.b2b-print-signatures {
+  display: flex;
+  gap: 3rem;
+  margin-top: 2rem;
+}
+
+.b2b-print-sig-block {
+  flex: 1;
+  max-width: 220px;
+}
+
+.b2b-print-sig-line {
+  border-bottom: 1px solid #111;
+  height: 2rem;
+  margin-bottom: 0.35rem;
+}
+
+.b2b-print-page-footer {
+  margin-top: 2rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #ddd;
+  text-align: center;
+  font-size: 10px;
+  color: #555;
+}
+
+.b2b-print-thanks {
+  margin: 0.25rem 0 0;
+}
+
+@media print {
+  @page b2b-a4 {
+    size: A4;
+    margin: 10mm;
+  }
+
+  html.b2b-document-print-mode {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  html.b2b-document-print-mode body * {
+    visibility: hidden;
+  }
+
+  html.b2b-document-print-mode #b2b-print-document,
+  html.b2b-document-print-mode #b2b-print-document * {
+    visibility: visible;
+  }
+
+  html.b2b-document-print-mode #b2b-print-document {
+    page: b2b-a4;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+  }
+
+  html.b2b-document-print-mode .no-print {
+    display: none !important;
+  }
+
+  html.b2b-document-print-mode .b2b-print-items thead {
+    display: table-header-group;
+  }
+
+  html.b2b-document-print-mode .b2b-print-items tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  html.refund-print-mode {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  html.refund-print-mode body * {
+    visibility: hidden;
+  }
+
+  html.refund-print-mode #refund-print-document,
+  html.refund-print-mode #refund-print-document * {
+    visibility: visible;
+  }
+
+  html.refund-print-mode #refund-print-document {
+    page: b2b-a4;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: white;
+    color: black;
+  }
+
+  html.refund-print-mode .no-print {
+    display: none !important;
+  }
+
+  html.refund-print-mode .refund-print-items thead {
+    display: table-header-group;
+  }
+
+  html.refund-print-mode .refund-print-items tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

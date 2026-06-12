@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { NavLink } from 'react-router-dom';
 import { Loader2, LogOut, PanelLeftClose, PanelLeft } from 'lucide-react';
-import { visibleNavSections } from '@/config/navigation';
+import { visibleNavSectionsForBusiness } from '@/config/navigation';
+import { useBusinessType, useFnbEnabled, useWholesaleEnabled } from '@/hooks/use-tenant-context';
 import { cn } from '@/lib/utils';
 import { formatRoleLabel } from '@/lib/format-user';
 import { useAuthStore } from '@/stores/auth-store';
@@ -45,7 +46,17 @@ export function Sidebar({ onNavigate, collapsed, onCollapsedChange }: SidebarPro
     }
   }
 
-  const sections = visibleNavSections(user?.role);
+  const permissions = useAuthStore((s) => s.permissions);
+  const businessType = useBusinessType();
+  const fnbEnabled = useFnbEnabled();
+  const wholesaleEnabled = useWholesaleEnabled();
+  const sections = visibleNavSectionsForBusiness(
+    user?.role,
+    businessType,
+    fnbEnabled,
+    wholesaleEnabled,
+    permissions,
+  );
   const widthClass = collapsed ? 'w-[68px]' : 'w-60';
 
   return (

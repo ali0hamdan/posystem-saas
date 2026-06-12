@@ -9,13 +9,14 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useStoreSettings } from '@/hooks/use-store-settings';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { StatCard } from '@/components/ui/stat-card';
-import { Modal } from '@/components/ui/Modal';
 import { ErrorBanner } from '@/components/ui/error-banner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CustomerPaymentModal } from '@/features/customers/CustomerPaymentModal';
 import { AdjustBalanceModal } from '@/features/customers/AdjustBalanceModal';
-import type { CustomerLedgerType } from '@/types/customers';
+import { CustomerFormModal, customerToForm } from '@/features/customers/CustomerFormModal';
+import type { CustomerFormBody, CustomerLedgerType } from '@/types/customers';
 
 const LEDGER_PAGE = 30;
 
@@ -52,8 +53,6 @@ export function CustomerDetailPage() {
 
   const [ledgerPage, setLedgerPage] = useState(1);
   const [editOpen, setEditOpen] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editPhone, setEditPhone] = useState('');
   const [payOpen, setPayOpen] = useState(false);
   const [adjOpen, setAdjOpen] = useState(false);
 
@@ -72,10 +71,18 @@ export function CustomerDetailPage() {
   const balanceNum = customerQuery.data ? Number(customerQuery.data.balance) : 0;
 
   const updateMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (body: CustomerFormBody) =>
       updateCustomer(id, {
-        name: editName.trim(),
-        phone: editPhone.trim() || null,
+        name: body.name,
+        phone: body.phone || null,
+        email: body.email || null,
+        address: body.address || null,
+        companyName: body.companyName || null,
+        taxNumber: body.taxNumber || null,
+        notes: body.notes || null,
+        isActive: body.isActive,
+        paymentTermsDays: body.paymentTermsDays,
+        creditLimit: body.creditLimit,
       }),
     onSuccess: () => {
       toast.success('Customer updated');
@@ -91,13 +98,7 @@ export function CustomerDetailPage() {
   const ledgerRows = ledgerQuery.data?.data ?? [];
   const ledgerMeta = ledgerQuery.data?.meta;
 
-  const openEdit = useCallback(() => {
-    if (customerQuery.data) {
-      setEditName(customerQuery.data.name);
-      setEditPhone(customerQuery.data.phone ?? '');
-      setEditOpen(true);
-    }
-  }, [customerQuery.data]);
+  const openEdit = useCallback(() => setEditOpen(true), []);
 
   if (!id) {
     return <p className="text-sm text-ink-muted">Invalid customer.</p>;
@@ -122,8 +123,10 @@ export function CustomerDetailPage() {
           />
         ) : customerQuery.data ? (
           <PageHeader
-            title={customerQuery.data.name}
-            description={customerQuery.data.phone ?? 'No phone on file'}
+            title={customerQuery.data.companyName && customerQuery.data.companyName !== customerQuery.data.name
+              ? `${customerQuery.data.name} · ${customerQuery.data.companyName}`
+              : customerQuery.data.name}
+            description={[customerQuery.data.phone, customerQuery.data.email].filter(Boolean).join(' · ') || 'No contact on file'}
             actions={
               canManage ? (
                 <div className="flex flex-wrap gap-2">
@@ -143,6 +146,25 @@ export function CustomerDetailPage() {
 
       {customerQuery.data ? (
         <>
+          <section className="rounded-2xl border border-line bg-surface p-5 shadow-card">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="font-display text-lg font-semibold text-ink">Contact &amp; business</h2>
+              <Badge variant={customerQuery.data.isActive ? 'success' : 'muted'}>
+                {customerQuery.data.isActive ? 'Active' : 'Inactive'}
+              </Badge>
+            </div>
+            <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+              <div><dt className="text-ink-muted">Phone</dt><dd className="mt-0.5 text-ink">{customerQuery.data.phone || '—'}</dd></div>
+              <div><dt className="text-ink-muted">Email</dt><dd className="mt-0.5 text-ink">{customerQuery.data.email || '—'}</dd></div>
+              <div className="sm:col-span-2 lg:col-span-3"><dt className="text-ink-muted">Address</dt><dd className="mt-0.5 whitespace-pre-wrap text-ink">{customerQuery.data.address || '—'}</dd></div>
+              <div><dt className="text-ink-muted">Company</dt><dd className="mt-0.5 text-ink">{customerQuery.data.companyName || '—'}</dd></div>
+              <div><dt className="text-ink-muted">Tax / VAT</dt><dd className="mt-0.5 text-ink">{customerQuery.data.taxNumber || '—'}</dd></div>
+              <div><dt className="text-ink-muted">Payment terms</dt><dd className="mt-0.5 text-ink">{customerQuery.data.paymentTermsDays != null ? `Net ${customerQuery.data.paymentTermsDays}` : '—'}</dd></div>
+              <div><dt className="text-ink-muted">Credit limit</dt><dd className="mt-0.5 text-ink">{customerQuery.data.creditLimit != null ? fmt(Number(customerQuery.data.creditLimit)) : '—'}</dd></div>
+              <div className="sm:col-span-2 lg:col-span-3"><dt className="text-ink-muted">Notes</dt><dd className="mt-0.5 whitespace-pre-wrap text-ink">{customerQuery.data.notes || '—'}</dd></div>
+            </dl>
+          </section>
+
           <section className="grid gap-4 sm:grid-cols-2">
             <StatCard
               title="Balance owed"
@@ -253,45 +275,15 @@ export function CustomerDetailPage() {
         </>
       ) : null}
 
-      <Modal
+      <CustomerFormModal
         open={editOpen}
-        onClose={() => !updateMutation.isPending && setEditOpen(false)}
         title="Edit customer"
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => setEditOpen(false)} disabled={updateMutation.isPending}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="primary"
-              disabled={updateMutation.isPending || !editName.trim()}
-              onClick={() => updateMutation.mutate()}
-            >
-              {updateMutation.isPending ? 'Saving…' : 'Save'}
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">Name</span>
-            <input
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              className="h-11 w-full rounded-xl border border-line bg-canvas px-3 text-sm outline-none focus:border-primary-300 focus:ring-2 focus:ring-primary-500/20"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">Phone</span>
-            <input
-              value={editPhone}
-              onChange={(e) => setEditPhone(e.target.value)}
-              className="h-11 w-full rounded-xl border border-line bg-canvas px-3 text-sm outline-none focus:border-primary-300 focus:ring-2 focus:ring-primary-500/20"
-            />
-          </label>
-        </div>
-      </Modal>
+        description="Balance is not changed here — only contact and business details."
+        initial={customerQuery.data ? customerToForm(customerQuery.data) : undefined}
+        saving={updateMutation.isPending}
+        onClose={() => setEditOpen(false)}
+        onSubmit={(body) => updateMutation.mutate(body)}
+      />
 
       <CustomerPaymentModal
         open={payOpen}

@@ -14,7 +14,8 @@ export function PaymentPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const paymentId = params.get('paymentId') ?? '';
-  const usernameParam = params.get('username') ?? '';
+  const emailParam = params.get('email') ?? '';
+  const businessType = params.get('businessType') ?? 'RETAIL';
 
   const [payment, setPayment] = useState<PaymentStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,21 +31,43 @@ export function PaymentPage() {
       .then((p) => {
         setPayment(p);
         if (p.status === 'PAID') {
-          navigate(`/payment-success?paymentId=${paymentId}&plan=${p.planCode}&username=${encodeURIComponent(usernameParam)}`);
+          const qs = new URLSearchParams({
+            paymentId,
+            plan: p.planCode,
+            email: emailParam,
+            businessType: p.businessType ?? businessType,
+          });
+          if (p.isLifetime) qs.set('lifetime', '1');
+          if (p.desktopDownloadEnabled) qs.set('desktop', '1');
+          if (p.unlimited) qs.set('unlimited', '1');
+          if (p.maxDevices != null) qs.set('maxDevices', String(p.maxDevices));
+          if (p.amount) qs.set('amount', p.amount);
+          navigate(`/payment-success?${qs.toString()}`);
         }
       })
       .catch(() => setError('Payment not found. Please check your registration email.'))
       .finally(() => setLoading(false));
-  }, [paymentId, navigate, usernameParam]);
+  }, [paymentId, navigate, emailParam, businessType]);
 
   async function handleSimulate() {
     setError(null);
     setSimulating(true);
     try {
       const result = await simulatePaymentSuccess(paymentId);
-      navigate(
-        `/payment-success?paymentId=${paymentId}&activationCode=${encodeURIComponent(result.activationCode)}&plan=${result.planCode}&username=${encodeURIComponent(result.username ?? usernameParam)}`,
-      );
+      const qs = new URLSearchParams({
+        paymentId,
+        plan: result.planCode,
+        email: result.ownerEmail,
+        businessType: result.businessType,
+        next: result.nextDashboardUrl,
+      });
+      if (result.activationCode) qs.set('activationCode', result.activationCode);
+      if (result.isLifetime) qs.set('lifetime', '1');
+      if (result.desktopDownloadEnabled) qs.set('desktop', '1');
+      if (result.unlimited) qs.set('unlimited', '1');
+      if (result.maxDevices != null) qs.set('maxDevices', String(result.maxDevices));
+      if (result.amount) qs.set('amount', result.amount);
+      navigate(`/payment-success?${qs.toString()}`);
     } catch (err) {
       setError(getPublicApiError(err, 'Payment simulation failed.'));
     } finally {
@@ -79,6 +102,12 @@ export function PaymentPage() {
                 <span className="text-gray-500 dark:text-gray-400">Billing</span>
                 <span className="font-medium text-gray-900 dark:text-white">{payment.billingCycle}</span>
               </div>
+              {emailParam ? (
+                <div className="flex justify-between">
+                  <span className="text-gray-500 dark:text-gray-400">Login email</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{emailParam}</span>
+                </div>
+              ) : null}
               <div className="flex justify-between border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
                 <span className="text-gray-700 dark:text-gray-300 font-semibold">Total</span>
                 <span className="text-lg font-bold text-gray-900 dark:text-white">

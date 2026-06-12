@@ -1,15 +1,54 @@
 import { useEffect, useRef } from 'react';
 import { isStoreAccessToken } from '@/lib/store-auth';
+import { IS_DESKTOP_APP } from '@/lib/env';
 import { useAuthStore } from '@/stores/auth-store';
 import { noteApiReachable, noteApiUnreachable, useConnectivityStore } from '@/stores/connectivity-store';
 import { pingApiHealth } from '@/offline/connectivity-ping';
 import { pullOfflineCatalog } from '@/offline/cache-pull';
 import { processOfflineSaleSyncQueue, processOfflinePurchaseQueue } from '@/offline/sync-engine';
+import { posOfflineDb } from '@/offline/pos-db';
 
 /**
  * Background connectivity checks, catalog warm-up while online, and offline sale sync.
+ *
+ * Desktop note: in packaged Electron we run a local NestJS backend on
+ * 127.0.0.1:3001, so the legacy Dexie offline queue is redundant and could
+ * cause duplicate writes if a sale was queued while running web SaaS and
+ * then migrated to desktop. We short-circuit all queue processing here.
+ * Stale queue rows are detected and warned about — we deliberately do NOT
+ * auto-flush them to the local backend, since they may reference a
+ * different tenant entirely.
  */
 export function OfflineBootstrap() {
+  // -------------------------------------------------------------------
+  // Desktop: bypass the entire offline queue pipeline.
+  // -------------------------------------------------------------------
+  if (IS_DESKTOP_APP) {
+    return <DesktopOfflineBootstrap />;
+  }
+  return <WebOfflineBootstrap />;
+}
+
+/** Desktop-only no-op effect that just warns about any stale queue rows. */
+function DesktopOfflineBootstrap() {
+  useEffect(() => {
+    void (async () => {
+      try {
+        const queued = await posOfflineDb.offlineSaleQueue.count();
+        if (queued > 0) {
+          console.warn(
+            `[desktop] ignoring ${queued} stale Dexie offline-sale row(s). The desktop app writes directly to the local backend; the legacy web queue is disabled.`,
+          );
+        }
+      } catch {
+        /* IndexedDB may not be available — ignore */
+      }
+    })();
+  }, []);
+  return null;
+}
+
+function WebOfflineBootstrap() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
   const lastPullRef = useRef(0);

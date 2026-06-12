@@ -13,12 +13,18 @@
     "preview": "vite preview",
     "icons:ico": "node scripts/generate-icon.mjs",
     "electron:dev": "concurrently -k \"vite\" \"wait-on http://127.0.0.1:5173 && electron .\"",
+    "electron:dev:full": "cross-env DESKTOP_LOCAL_SERVICES=true concurrently -k \"vite\" \"wait-on http://127.0.0.1:5173 && electron .\"",
     "electron:build": "cross-env ELECTRON_BUILD=true tsc -b && cross-env ELECTRON_BUILD=true vite build",
-    "electron:pack": "npm run electron:build && electron-builder --dir",
-    "electron:dist:win": "npm run electron:build && electron-builder --win --x64",
-    "electron:dist:mac": "npm run electron:build && electron-builder --mac",
-    "electron:dist:linux": "npm run electron:build && electron-builder --linux",
-    "electron:dist": "npm run electron:build && electron-builder --win --x64"
+    "electron:pack": "npm run electron:build && node scripts/run-electron-builder.mjs --dir",
+    "electron:dist:win": "npm run desktop:prepare && npm run desktop:preflight && node scripts/run-electron-builder.mjs --win --x64",
+    "electron:dist:mac": "npm run desktop:prepare && npm run desktop:preflight && node scripts/run-electron-builder.mjs --mac",
+    "electron:dist:linux": "npm run desktop:prepare && npm run desktop:preflight && node scripts/run-electron-builder.mjs --linux",
+    "electron:dist": "npm run desktop:prepare && npm run desktop:preflight && node scripts/run-electron-builder.mjs --win --x64",
+    "desktop:build:frontend": "npm run electron:build",
+    "desktop:build:backend": "node scripts/build-backend.mjs",
+    "desktop:prepare": "npm run desktop:build:frontend && npm run desktop:build:backend",
+    "desktop:preflight": "node scripts/desktop-preflight.mjs",
+    "desktop:dist:win": "npm run desktop:prepare && npm run desktop:preflight && node scripts/run-electron-builder.mjs --win --x64"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -83,12 +89,53 @@
     "productName": "Nezhin POS",
     "artifactName": "${productName}-Setup-${version}.${ext}",
     "directories": {
-      "output": "../dist"
+      "output": "${env.NEZHIN_BUILD_OUTPUT}"
     },
     "files": [
       "dist/**/*",
       "electron/**/*",
       "package.json"
+    ],
+    "asarUnpack": [
+      "electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../backend/dist",
+        "to": "backend/dist",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../backend/prisma",
+        "to": "backend/prisma",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../backend/package.json",
+        "to": "backend/package.json"
+      },
+      {
+        "from": "../backend/node_modules",
+        "to": "backend/node_modules",
+        "filter": [
+          "**/*",
+          "!**/*.{md,markdown,map,ts}",
+          "!**/test/**",
+          "!**/tests/**",
+          "!**/.bin/**"
+        ]
+      },
+      {
+        "from": "../desktop-runtime/postgres",
+        "to": "postgres-runtime",
+        "filter": [
+          "**/*"
+        ]
+      }
     ],
     "publish": {
       "provider": "generic",
@@ -118,7 +165,8 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": true
     }
   }
 }

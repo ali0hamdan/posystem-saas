@@ -17,6 +17,10 @@ function normalizeStoreSettings(raw: Partial<StoreSettings> | undefined): StoreS
     receiptCopies: Number.isFinite(copies) ? Math.min(10, Math.max(1, Math.trunc(copies))) : 1,
     receiptShowLogo: raw.receiptShowLogo !== false,
     receiptPrinterName: raw.receiptPrinterName ?? null,
+    refundApprovalMethod:
+      raw.refundApprovalMethod === 'NFC_CARD' || raw.refundApprovalMethod === 'NFC_CARD_AND_PIN'
+        ? raw.refundApprovalMethod
+        : 'APPROVAL_ID',
   };
 }
 

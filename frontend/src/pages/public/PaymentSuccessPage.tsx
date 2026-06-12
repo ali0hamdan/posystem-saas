@@ -1,13 +1,30 @@
 import { useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { CheckCircle, Copy, Check, Download, LogIn } from 'lucide-react';
+import { CheckCircle, Copy, Check, Download, LogIn, Monitor } from 'lucide-react';
+import { defaultDashboardPath } from '@/lib/business-routing';
+import type { BusinessType } from '@/types/tenant-context';
 
 export function PaymentSuccessPage() {
   const [params] = useSearchParams();
   const activationCode = params.get('activationCode') ?? '';
   const plan = params.get('plan') ?? '';
-  const username = params.get('username') ?? '';
+  const email = params.get('email') ?? '';
+  const businessType = (params.get('businessType') ?? 'RETAIL') as BusinessType;
+  const isLifetime = params.get('lifetime') === '1';
+  const desktopEnabled = params.get('desktop') === '1';
+  const amount = params.get('amount');
+  const nextDashboard =
+    params.get('next') ?? defaultDashboardPath(businessType);
   const [copied, setCopied] = useState(false);
+  const isDesktopLifetime = isLifetime && desktopEnabled;
+
+  const BUSINESS_TYPE_LABEL: Record<string, string> = {
+    RETAIL: 'Retail',
+    FOOD_BEVERAGE: 'F&B',
+    WHOLESALE: 'Wholesale',
+    HYBRID: 'Hybrid',
+  };
+  const businessTypeLabel = BUSINESS_TYPE_LABEL[businessType] ?? businessType;
 
   function copyCode() {
     if (!activationCode) return;
@@ -26,17 +43,57 @@ export function PaymentSuccessPage() {
           </div>
 
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            Payment Successful!
+            {isDesktopLifetime ? 'Your desktop license is ready' : 'Payment Successful!'}
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mb-6">
-            Your <strong className="text-gray-700 dark:text-gray-200">{plan}</strong> subscription is now active.
+            {isDesktopLifetime ? (
+              <>
+                You purchased the Desktop Lifetime license for{' '}
+                <strong className="text-gray-700 dark:text-gray-200">{businessTypeLabel}</strong>.
+                You can now download the desktop app and activate your system.
+              </>
+            ) : (
+              <>Your <strong className="text-gray-700 dark:text-gray-200">{plan}</strong> subscription is now active.</>
+            )}
           </p>
 
-          {username && (
+          {isDesktopLifetime && (
+            <div className="mb-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 px-4 py-3 text-sm text-left">
+              <p className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 font-medium mb-2">
+                <Monitor className="h-4 w-4" />
+                One-time desktop license
+              </p>
+              <dl className="space-y-1 text-indigo-600 dark:text-indigo-400">
+                <div className="flex justify-between gap-4">
+                  <dt>Plan</dt>
+                  <dd className="font-medium">{plan}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt>Business type</dt>
+                  <dd className="font-medium">{businessTypeLabel}</dd>
+                </div>
+                {amount && (
+                  <div className="flex justify-between gap-4">
+                    <dt>Price paid</dt>
+                    <dd className="font-medium">${amount}</dd>
+                  </div>
+                )}
+                <div className="flex justify-between gap-4">
+                  <dt>Billing type</dt>
+                  <dd className="font-medium">One-time payment</dd>
+                </div>
+              </dl>
+              <p className="text-xs text-indigo-500 dark:text-indigo-500 mt-2">
+                Unlimited desktop use — download and activate your POS desktop app.
+              </p>
+            </div>
+          )}
+
+          {email && (
             <div className="mb-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-4 py-3 text-sm text-left">
-              <p className="text-blue-700 dark:text-blue-300 font-medium mb-1">Your login credentials</p>
+              <p className="text-blue-700 dark:text-blue-300 font-medium mb-1">Your business account is ready</p>
               <p className="text-blue-600 dark:text-blue-400">
-                Username: <span className="font-mono font-bold">{username}</span>
+                Login email: <span className="font-mono font-bold">{email}</span>
               </p>
               <p className="text-xs text-blue-500 dark:text-blue-500 mt-1">
                 Use the password you set during registration.
@@ -68,12 +125,26 @@ export function PaymentSuccessPage() {
           )}
 
           <div className="space-y-3">
+            {isDesktopLifetime && (
+              <Link
+                to="/download"
+                className="flex items-center justify-center gap-2 w-full rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
+              >
+                <Download className="h-4 w-4" />
+                Download Desktop App
+              </Link>
+            )}
             <Link
               to="/login"
-              className="flex items-center justify-center gap-2 w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+              state={{ paymentSuccess: true, email, from: nextDashboard }}
+              className={`flex items-center justify-center gap-2 w-full rounded-xl py-3 text-sm font-semibold transition-colors ${
+                isDesktopLifetime
+                  ? 'border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
             >
               <LogIn className="h-4 w-4" />
-              Sign in to your account
+              Go to Dashboard
             </Link>
             <Link
               to="/activate"

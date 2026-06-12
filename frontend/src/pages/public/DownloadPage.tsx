@@ -1,6 +1,16 @@
 import { Link } from 'react-router-dom';
-import { Download, Monitor, Wifi, Shield, Zap, ArrowRight } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Download, Monitor, Wifi, Shield, Zap, ArrowRight, Loader2, Clock } from 'lucide-react';
 import { usePlanFeature } from '@/hooks/use-plan-features';
+import { useFeature, useBusinessType } from '@/hooks/use-tenant-context';
+import { fetchDesktopDownload } from '@/api/license.api';
+
+const DESKTOP_APP_NAME: Record<string, string> = {
+  RETAIL: 'Retail Desktop App',
+  FOOD_BEVERAGE: 'F&B Desktop App',
+  WHOLESALE: 'Wholesale Desktop App',
+  HYBRID: 'Hybrid Desktop App',
+};
 
 const STEPS = [
   { step: '1', label: 'Download the installer', detail: 'Click the button below to download the latest POS Desktop installer for Windows.' },
@@ -48,11 +58,28 @@ function AccessDenied() {
 }
 
 export function DownloadPage() {
-  const canDownload = usePlanFeature('offline_mode');
+  // Gate by the plan's desktop_download feature (PRO + Desktop Lifetime plans).
+  const desktopFeature = useFeature('desktop_download');
+  const offlineFallback = usePlanFeature('offline_mode');
+  const canDownload = desktopFeature || offlineFallback;
+  const businessType = useBusinessType();
+
+  // Server-side check + signed installer URL. The backend re-validates the plan,
+  // client status, and subscription before returning anything.
+  const dl = useQuery({
+    queryKey: ['license', 'desktop-download'],
+    queryFn: fetchDesktopDownload,
+    enabled: canDownload,
+    staleTime: 60_000,
+    retry: false,
+  });
 
   if (!canDownload) {
     return <AccessDenied />;
   }
+
+  const appName =
+    (businessType && DESKTOP_APP_NAME[businessType]) ?? 'Nezhin POS Desktop';
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-16 px-4">
@@ -73,16 +100,39 @@ export function DownloadPage() {
         {/* Download card */}
         <div className="rounded-2xl border-2 border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-800 p-8 mb-10 text-center shadow-lg shadow-blue-50 dark:shadow-none">
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Latest version</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">POS Desktop</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{appName}</p>
           <p className="text-sm text-gray-400 dark:text-gray-500 mb-8">Windows 10 / 11 · 64-bit</p>
 
-          <a
-            href="/downloads/pos-desktop-setup.exe"
-            className="inline-flex items-center gap-3 rounded-xl bg-blue-600 px-8 py-4 text-base font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all shadow-md hover:shadow-blue-300 dark:hover:shadow-blue-900/40"
-          >
-            <Download className="h-5 w-5" />
-            Download for Windows
-          </a>
+          {dl.isLoading ? (
+            <div className="inline-flex items-center gap-3 rounded-xl bg-gray-100 dark:bg-gray-700 px-8 py-4 text-base font-semibold text-gray-500 dark:text-gray-300">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Checking your license…
+            </div>
+          ) : dl.data?.available && dl.data.downloadUrl ? (
+            <a
+              href={dl.data.downloadUrl}
+              className="inline-flex items-center gap-3 rounded-xl bg-blue-600 px-8 py-4 text-base font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all shadow-md hover:shadow-blue-300 dark:hover:shadow-blue-900/40"
+            >
+              <Download className="h-5 w-5" />
+              Download for Windows
+            </a>
+          ) : dl.isError ? (
+            <div className="inline-flex items-center gap-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-8 py-4 text-sm font-medium text-red-700 dark:text-red-400">
+              Sign in with an eligible plan to download the desktop app.
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-3 rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-8 py-4 text-sm font-medium text-amber-800 dark:text-amber-300">
+              <Clock className="h-5 w-5 shrink-0" />
+              {dl.data?.message ?? 'Desktop installer is not available yet.'}
+            </div>
+          )}
+
+          {dl.data?.maxDevices != null && (
+            <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
+              Your license allows activation on up to {dl.data.maxDevices} device
+              {dl.data.maxDevices === 1 ? '' : 's'}.
+            </p>
+          )}
 
           <p className="mt-4 text-xs text-gray-400 dark:text-gray-500">
             By downloading, you agree to the{' '}

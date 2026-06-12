@@ -10,6 +10,9 @@
     "dev:backend": "npm run start:dev --prefix backend",
     "dev:frontend": "npm run dev --prefix frontend",
     "dev:electron": "npm run electron:dev --prefix frontend",
+    "desktop:dev": "npm run electron:dev:full --prefix frontend",
+    "desktop:build": "npm run desktop:prepare --prefix frontend",
+    "desktop:dist": "npm run desktop:dist:win --prefix frontend",
     "prisma:migrate:deploy": "npm run prisma:migrate:deploy --prefix backend",
     "prisma:generate": "npm run prisma:generate --prefix backend",
     "db:seed": "npm run seed --prefix backend"

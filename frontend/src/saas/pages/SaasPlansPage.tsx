@@ -11,6 +11,7 @@ import { createSaasPlan, fetchSaasPlans, patchSaasPlan } from '@/saas/api/saas-p
 import { SaasQueryError, SaasTableSkeleton } from '@/saas/components/SaasQueryState';
 import { getSaasApiErrorMessage } from '@/saas/api/saas-client';
 import { useSaasPermissions } from '@/saas/hooks/use-saas-permissions';
+import { ALL_PLAN_FEATURE_GROUPS } from '@/lib/plan-feature-keys';
 import type { LicensePlanCode, SaasPlan } from '@/saas/types';
 
 
@@ -36,6 +37,7 @@ export function SaasPlansPage() {
   const [editMaxBranches, setEditMaxBranches] = useState('');
   const [editMaxDevices, setEditMaxDevices] = useState('');
   const [editActive, setEditActive] = useState(true);
+  const [editFeatures, setEditFeatures] = useState<Record<string, boolean>>({});
 
   const plansQ = useQuery({ queryKey: ['saas', 'plans'], queryFn: fetchSaasPlans });
 
@@ -66,10 +68,17 @@ export function SaasPlansPage() {
     setEditMonthly(p.monthlyPrice ?? '');
     setEditYearly(p.yearlyPrice ?? '');
     setEditOneTime(p.oneTimePrice ?? '');
-    setEditMaxUsers(String(p.maxUsers));
-    setEditMaxBranches(String(p.maxBranches));
-    setEditMaxDevices(String(p.maxDevices));
+    setEditMaxUsers(p.maxUsers == null ? '' : String(p.maxUsers));
+    setEditMaxBranches(p.maxBranches == null ? '' : String(p.maxBranches));
+    setEditMaxDevices(p.maxDevices == null ? '' : String(p.maxDevices));
     setEditActive(p.isActive);
+    const feats: Record<string, boolean> = {};
+    for (const group of ALL_PLAN_FEATURE_GROUPS) {
+      for (const f of group.features) {
+        feats[f.key] = (p.features as Record<string, boolean>)?.[f.key] === true;
+      }
+    }
+    setEditFeatures(feats);
   }
 
   function submitEdit() {
@@ -81,10 +90,12 @@ export function SaasPlansPage() {
         monthlyPrice: editMonthly ? Number(editMonthly) : null,
         yearlyPrice: editYearly ? Number(editYearly) : null,
         oneTimePrice: editOneTime ? Number(editOneTime) : null,
-        maxUsers: Number(editMaxUsers) || editPlan.maxUsers,
-        maxBranches: Number(editMaxBranches) || editPlan.maxBranches,
-        maxDevices: Number(editMaxDevices) || editPlan.maxDevices,
+        // Blank = leave unchanged (unlimited plans keep null).
+        maxUsers: Number(editMaxUsers) > 0 ? Number(editMaxUsers) : undefined,
+        maxBranches: Number(editMaxBranches) > 0 ? Number(editMaxBranches) : undefined,
+        maxDevices: Number(editMaxDevices) > 0 ? Number(editMaxDevices) : undefined,
         isActive: editActive,
+        features: editFeatures,
       },
     });
   }
@@ -134,9 +145,9 @@ export function SaasPlansPage() {
                   <Td>{p.monthlyPrice ? `$${p.monthlyPrice}` : '—'}</Td>
                   <Td>{p.yearlyPrice ? `$${p.yearlyPrice}` : '—'}</Td>
                   <Td>{p.oneTimePrice ? `$${p.oneTimePrice}` : '—'}</Td>
-                  <Td>{p.maxUsers}</Td>
-                  <Td>{p.maxBranches}</Td>
-                  <Td>{p.maxDevices}</Td>
+                  <Td>{p.maxUsers ?? '∞'}</Td>
+                  <Td>{p.maxBranches ?? '∞'}</Td>
+                  <Td>{p.maxDevices ?? '∞'}</Td>
                   <Td>{p.isActive !== false ? '✓' : '✗'}</Td>
                   {perms.canManagePlans ? (
                     <Td>
@@ -188,6 +199,9 @@ export function SaasPlansPage() {
               <option value="BUSINESS">BUSINESS</option>
               <option value="PRO">PRO</option>
               <option value="LIFETIME_DESKTOP">LIFETIME_DESKTOP</option>
+              <option value="RETAIL_DESKTOP_LIFETIME">RETAIL_DESKTOP_LIFETIME</option>
+              <option value="FNB_DESKTOP_LIFETIME">FNB_DESKTOP_LIFETIME</option>
+              <option value="WHOLESALE_DESKTOP_LIFETIME">WHOLESALE_DESKTOP_LIFETIME</option>
               <option value="ENTERPRISE">ENTERPRISE</option>
             </SelectInput>
           </div>
@@ -264,6 +278,27 @@ export function SaasPlansPage() {
               className="h-4 w-4 rounded border-line"
             />
             <FieldLabel htmlFor="ep-active">Active</FieldLabel>
+          </div>
+          <div className="sm:col-span-2 space-y-4 border-t border-line pt-4">
+            <p className="text-sm font-medium text-ink">Module features</p>
+            {ALL_PLAN_FEATURE_GROUPS.map((group) => (
+              <div key={group.title}>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">{group.title}</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {group.features.map((f) => (
+                    <label key={f.key} className="flex items-center gap-2 text-sm text-ink">
+                      <input
+                        type="checkbox"
+                        checked={editFeatures[f.key] === true}
+                        onChange={(e) => setEditFeatures((prev) => ({ ...prev, [f.key]: e.target.checked }))}
+                        className="h-4 w-4 rounded border-line"
+                      />
+                      {f.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </Modal>

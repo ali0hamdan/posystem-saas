@@ -43,8 +43,8 @@ export function LicenseStatusPage() {
     plan?: string;
     expiresAt?: string;
     lockAfter?: string;
-    maxBranches?: number;
-    maxDevices?: number;
+    maxBranches?: number | null;
+    maxDevices?: number | null;
     serverTime?: string;
   };
 
@@ -79,11 +79,11 @@ export function LicenseStatusPage() {
             </div>
             <div>
               <dt className="text-xs uppercase text-ink-muted">Max branches</dt>
-              <dd>{d.maxBranches ?? '—'}</dd>
+              <dd>{d.maxBranches === null ? 'Unlimited' : d.maxBranches ?? '—'}</dd>
             </div>
             <div>
               <dt className="text-xs uppercase text-ink-muted">Max devices</dt>
-              <dd>{d.maxDevices ?? '—'}</dd>
+              <dd>{d.maxDevices === null ? 'Unlimited' : d.maxDevices ?? '—'}</dd>
             </div>
           </dl>
         </div>

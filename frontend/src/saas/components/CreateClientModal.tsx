@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/button';
 import { FieldLabel, SelectInput, TextInput } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { createSaasClient } from '@/saas/api/saas-clients.api';
 import { fetchSaasPlans } from '@/saas/api/saas-plans.api';
 import { getSaasApiErrorMessage } from '@/saas/api/saas-client';
@@ -212,9 +213,8 @@ export function CreateClientModal({ open, onClose, onCreated }: Props) {
             </div>
             <div>
               <FieldLabel htmlFor="bc-pass">Owner password</FieldLabel>
-              <TextInput
+              <PasswordInput
                 id="bc-pass"
-                type="password"
                 className={saasFormFieldClass}
                 value={ownerPassword}
                 onChange={(e) => setOwnerPassword(e.target.value)}

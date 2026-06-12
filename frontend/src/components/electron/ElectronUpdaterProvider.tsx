@@ -41,6 +41,24 @@ export function ElectronUpdaterProvider({ children }: { children: ReactNode }) {
 
   const checkNow = useCallback(async () => {
     if (!isElectronUpdaterAvailable()) return;
+    // Defensive entitlement check in the renderer: if the customer's
+    // Desktop Care Plan has expired the main process will already refuse
+    // the IPC call, but checking here avoids a confusing "checking…"
+    // flash before the disabled state arrives.
+    if (typeof window.electronDesktopActivation !== 'undefined') {
+      try {
+        const status = await window.electronDesktopActivation.getStatus();
+        if (status.activated && status.entitlements.updatesActive === false) {
+          setPayload({
+            phase: 'disabled',
+            message: 'Updates expired. Renew your Desktop Care Plan to receive new updates.',
+          });
+          return;
+        }
+      } catch {
+        /* fall through — let the main process speak */
+      }
+    }
     setPayload((p) => ({ ...p, phase: 'checking' }));
     try {
       await window.electronUpdater!.checkForUpdates();

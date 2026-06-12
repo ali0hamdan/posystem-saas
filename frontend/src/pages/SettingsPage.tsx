@@ -1,12 +1,16 @@
 import { useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { BellRing } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { fetchStoreSettings, patchStoreSettings } from '@/api/settings.api';
 import { getApiErrorMessage } from '@/api/client';
-import type { PatchStoreSettingsBody } from '@/types/store-settings';
+import type { PatchStoreSettingsBody, RefundApprovalMethod } from '@/types/store-settings';
+import { useAuthStore } from '@/stores/auth-store';
 import { getElectronPrinters, isElectronPrintAvailable } from '@/lib/electron-print';
 import { ElectronUpdatePanel } from '@/components/electron/ElectronUpdatePanel';
+import { DesktopBackupPanel } from '@/components/electron/DesktopBackupPanel';
 import { Button } from '@/components/ui/button';
 import { ErrorBanner } from '@/components/ui/error-banner';
 
@@ -27,6 +31,20 @@ type FormValues = {
   receiptCopies: string;
   receiptShowLogo: boolean;
   receiptPrinterName: string;
+  quotationPrefix: string;
+  proformaPrefix: string;
+  invoicePrefix: string;
+  deliveryNotePrefix: string;
+  defaultPaymentTermsDays: string;
+  showTaxOnQuotation: boolean;
+  showSignatureArea: boolean;
+  enableCustomerCredit: boolean;
+  enableDeliveryNotes: boolean;
+  enableApprovalWorkflow: boolean;
+  allowOverCreditOverride: boolean;
+  allowOverStockOverride: boolean;
+  emailNotificationsEnabled: boolean;
+  refundApprovalMethod: RefundApprovalMethod;
 };
 
 function toPatchBody(v: FormValues): PatchStoreSettingsBody {
@@ -48,6 +66,20 @@ function toPatchBody(v: FormValues): PatchStoreSettingsBody {
     receiptCopies: Number.isFinite(copies) ? Math.min(10, Math.max(1, copies)) : 1,
     receiptShowLogo: v.receiptShowLogo,
     receiptPrinterName: v.receiptPrinterName.trim() === '' ? null : v.receiptPrinterName.trim(),
+    quotationPrefix: v.quotationPrefix.trim().toUpperCase(),
+    proformaPrefix: v.proformaPrefix.trim().toUpperCase(),
+    invoicePrefix: v.invoicePrefix.trim().toUpperCase(),
+    deliveryNotePrefix: v.deliveryNotePrefix.trim().toUpperCase(),
+    defaultPaymentTermsDays: Math.max(0, Math.trunc(Number(v.defaultPaymentTermsDays) || 0)),
+    showTaxOnQuotation: v.showTaxOnQuotation,
+    showSignatureArea: v.showSignatureArea,
+    enableCustomerCredit: v.enableCustomerCredit,
+    enableDeliveryNotes: v.enableDeliveryNotes,
+    enableApprovalWorkflow: v.enableApprovalWorkflow,
+    allowOverCreditOverride: v.allowOverCreditOverride,
+    allowOverStockOverride: v.allowOverStockOverride,
+    emailNotificationsEnabled: v.emailNotificationsEnabled,
+    ...(v.refundApprovalMethod ? { refundApprovalMethod: v.refundApprovalMethod } : {}),
   };
 }
 
@@ -56,6 +88,8 @@ const inputClass =
 
 export function SettingsPage() {
   const queryClient = useQueryClient();
+  const me = useAuthStore((s) => s.user);
+  const isOwner = me?.role === 'OWNER';
   const electronPrint = isElectronPrintAvailable();
   const printersQuery = useQuery({
     queryKey: ['electron-printers'],
@@ -85,6 +119,20 @@ export function SettingsPage() {
       receiptCopies: '1',
       receiptShowLogo: true,
       receiptPrinterName: '',
+      quotationPrefix: 'Q',
+      proformaPrefix: 'PI',
+      invoicePrefix: 'INV',
+      deliveryNotePrefix: 'DN',
+      defaultPaymentTermsDays: '30',
+      showTaxOnQuotation: true,
+      showSignatureArea: false,
+      enableCustomerCredit: true,
+      enableDeliveryNotes: true,
+      enableApprovalWorkflow: false,
+      allowOverCreditOverride: false,
+      allowOverStockOverride: false,
+      emailNotificationsEnabled: true,
+      refundApprovalMethod: 'APPROVAL_ID' as RefundApprovalMethod,
     },
   });
 
@@ -106,6 +154,20 @@ export function SettingsPage() {
       receiptCopies: String(s.receiptCopies),
       receiptShowLogo: s.receiptShowLogo,
       receiptPrinterName: s.receiptPrinterName ?? '',
+      quotationPrefix: s.quotationPrefix ?? 'Q',
+      proformaPrefix: s.proformaPrefix ?? 'PI',
+      invoicePrefix: s.invoicePrefix ?? 'INV',
+      deliveryNotePrefix: s.deliveryNotePrefix ?? 'DN',
+      defaultPaymentTermsDays: String(s.defaultPaymentTermsDays ?? 30),
+      showTaxOnQuotation: s.showTaxOnQuotation ?? true,
+      showSignatureArea: s.showSignatureArea ?? false,
+      enableCustomerCredit: s.enableCustomerCredit ?? true,
+      enableDeliveryNotes: s.enableDeliveryNotes ?? true,
+      enableApprovalWorkflow: s.enableApprovalWorkflow ?? false,
+      allowOverCreditOverride: s.allowOverCreditOverride ?? false,
+      allowOverStockOverride: s.allowOverStockOverride ?? false,
+      emailNotificationsEnabled: s.emailNotificationsEnabled ?? true,
+      refundApprovalMethod: s.refundApprovalMethod ?? 'APPROVAL_ID',
     });
   }, [settingsQuery.data, form]);
 
@@ -290,6 +352,118 @@ export function SettingsPage() {
             </section>
 
             <section className="rounded-2xl border border-line bg-surface p-5 shadow-card md:p-6">
+              <h2 className="font-display text-lg font-semibold text-ink">Wholesale / B2B</h2>
+              <p className="mt-1 text-sm text-ink-muted">
+                Document numbering, payment terms, and workflow toggles for quotations, proforma invoices, and delivery notes.
+              </p>
+              <div className="mt-4 space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div>
+                    <label htmlFor="ss-q-prefix" className={labelClass}>Quotation prefix</label>
+                    <input id="ss-q-prefix" maxLength={8} className={inputClass} {...form.register('quotationPrefix')} />
+                  </div>
+                  <div>
+                    <label htmlFor="ss-pi-prefix" className={labelClass}>Proforma prefix</label>
+                    <input id="ss-pi-prefix" maxLength={8} className={inputClass} {...form.register('proformaPrefix')} />
+                  </div>
+                  <div>
+                    <label htmlFor="ss-inv-prefix" className={labelClass}>Invoice prefix</label>
+                    <input id="ss-inv-prefix" maxLength={8} className={inputClass} {...form.register('invoicePrefix')} />
+                  </div>
+                  <div>
+                    <label htmlFor="ss-dn-prefix" className={labelClass}>Delivery note prefix</label>
+                    <input id="ss-dn-prefix" maxLength={8} className={inputClass} {...form.register('deliveryNotePrefix')} />
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="ss-terms-days" className={labelClass}>Default payment terms (days)</label>
+                  <input
+                    id="ss-terms-days"
+                    type="number"
+                    min={0}
+                    max={3650}
+                    className={`${inputClass} max-w-xs`}
+                    {...form.register('defaultPaymentTermsDays')}
+                  />
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
+                    <input type="checkbox" className="rounded border-line text-primary-500" {...form.register('showTaxOnQuotation')} />
+                    Show tax on quotations
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
+                    <input type="checkbox" className="rounded border-line text-primary-500" {...form.register('showSignatureArea')} />
+                    Show signature area on B2B documents
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
+                    <input type="checkbox" className="rounded border-line text-primary-500" {...form.register('enableCustomerCredit')} />
+                    Enable customer credit limits
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
+                    <input type="checkbox" className="rounded border-line text-primary-500" {...form.register('enableDeliveryNotes')} />
+                    Enable delivery notes
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
+                    <input type="checkbox" className="rounded border-line text-primary-500" {...form.register('enableApprovalWorkflow')} />
+                    Require approval workflow for large orders
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
+                    <input type="checkbox" className="rounded border-line text-primary-500" {...form.register('allowOverCreditOverride')} />
+                    Allow managers to override credit limits
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
+                    <input type="checkbox" className="rounded border-line text-primary-500" {...form.register('allowOverStockOverride')} />
+                    Allow managers to override stock reservations
+                  </label>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-line bg-surface p-5 shadow-card md:p-6">
+              <h2 className="font-display text-lg font-semibold text-ink">Email notifications</h2>
+              <p className="mt-1 text-sm text-ink-muted">
+                Choose who receives email notifications for each business event on the Notification
+                Settings page. The toggle below is a master switch for all notification emails.
+              </p>
+              <div className="mt-4 space-y-3">
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
+                  <input type="checkbox" className="rounded border-line text-primary-500" {...form.register('emailNotificationsEnabled')} />
+                  Enable email notifications
+                </label>
+                <Link
+                  to="notifications"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 hover:underline"
+                >
+                  <BellRing className="h-4 w-4" />
+                  Configure notification recipients
+                </Link>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-line bg-surface p-5 shadow-card md:p-6">
+              <h2 className="font-display text-lg font-semibold text-ink">Refund approval</h2>
+              <p className="mt-1 text-sm text-ink-muted">
+                Choose how managers authorize refunds. NFC Card + PIN is recommended for sensitive POS actions.
+                {!isOwner ? ' Only the owner can change this setting.' : ''}
+              </p>
+              <div className="mt-4 max-w-md">
+                <label htmlFor="ss-refund-approval" className={labelClass}>
+                  Refund approval method
+                </label>
+                <select
+                  id="ss-refund-approval"
+                  className={inputClass}
+                  disabled={!isOwner || busy}
+                  {...form.register('refundApprovalMethod')}
+                >
+                  <option value="APPROVAL_ID">Approval ID</option>
+                  <option value="NFC_CARD">NFC Card</option>
+                  <option value="NFC_CARD_AND_PIN">NFC Card + PIN</option>
+                </select>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-line bg-surface p-5 shadow-card md:p-6">
               <h2 className="font-display text-lg font-semibold text-ink">Inventory defaults</h2>
               <div className="mt-4">
                 <label htmlFor="ss-min" className={labelClass}>Default minimum stock for new products</label>
@@ -321,6 +495,7 @@ export function SettingsPage() {
             </p>
           </section>
 
+          <DesktopBackupPanel />
           <ElectronUpdatePanel />
         </>
       )}

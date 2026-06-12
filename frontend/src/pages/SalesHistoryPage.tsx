@@ -1,16 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, Eye, Plus, Printer } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { fetchSaleFilterUsers, fetchSales } from '@/api/sales.api';
 import { getApiErrorMessage } from '@/api/client';
 import { useAuthStore } from '@/stores/auth-store';
 import { formatMoney } from '@/lib/format-money';
 import { SaleDetailModal } from '@/features/sales-history/SaleDetailModal';
-import { RefundSaleModal } from '@/features/sales-history/RefundSaleModal';
+import { RefundModal } from '@/features/refunds/RefundModal';
+import { roleMatches } from '@/components/auth/RoleRoute';
+import type { RefundSourceType } from '@/api/refunds.api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
 import type { SaleDetail, SaleLifecycleStatus, SaleListRow, SalePaymentStatus } from '@/types/sales-history';
+import { b2bPrintPath } from '@/features/wholesale/print/print-paths';
 
 const PAGE_SIZE = 20;
 
@@ -61,10 +66,13 @@ const filterInputClass =
   'w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-500/25';
 
 export function SalesHistoryPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const wholesaleInvoices = location.pathname.includes('/wholesale/invoices');
   const user = useAuthStore((s) => s.user);
   const role = user?.role;
-  const canRefund = role === 'OWNER' || role === 'ADMIN';
-  const isAdmin = canRefund;
+  const canRefund = roleMatches(role, ['OWNER', 'ADMIN', 'MANAGER', 'GENERAL_MANAGER', 'CO_MANAGER']);
+  const isAdmin = roleMatches(role, ['OWNER', 'ADMIN', 'MANAGER', 'GENERAL_MANAGER']);
 
   const [page, setPage] = useState(1);
   const [fromDate, setFromDate] = useState('');
@@ -76,7 +84,8 @@ export function SalesHistoryPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailSaleId, setDetailSaleId] = useState<string | null>(null);
   const [refundOpen, setRefundOpen] = useState(false);
-  const [refundSale, setRefundSale] = useState<SaleDetail | null>(null);
+  const [refundSourceId, setRefundSourceId] = useState<string | null>(null);
+  const [refundSourceLabel, setRefundSourceLabel] = useState('');
 
   useEffect(() => {
     setPage(1);
@@ -122,20 +131,38 @@ export function SalesHistoryPage() {
   }
 
   function handleRequestRefund(sale: SaleDetail) {
-    setRefundSale(sale);
+    setRefundSourceId(sale.id);
+    setRefundSourceLabel(sale.invoiceNumber);
     setRefundOpen(true);
   }
 
   function closeRefund() {
     setRefundOpen(false);
-    setRefundSale(null);
+    setRefundSourceId(null);
+    setRefundSourceLabel('');
   }
+
+  const refundSourceType: RefundSourceType = wholesaleInvoices ? 'WHOLESALE_INVOICE' : 'RETAIL_SALE';
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-6">
       <PageHeader
-        title="Sales history"
-        description="Browse past sales, payments, and refunds."
+        title={wholesaleInvoices ? 'Official invoices' : 'Sales history'}
+        description={
+          wholesaleInvoices
+            ? 'B2B official invoices — stock, revenue, and customer balances are updated on creation.'
+            : 'Browse past sales, payments, and refunds.'
+        }
+        actions={
+          wholesaleInvoices ? (
+            <Link to="/wholesale/invoices/new">
+              <Button variant="primary" className="gap-2">
+                <Plus className="h-4 w-4" aria-hidden />
+                New invoice
+              </Button>
+            </Link>
+          ) : null
+        }
       />
 
       {/* Filters */}
@@ -208,6 +235,7 @@ export function SalesHistoryPage() {
                   <th className="whitespace-nowrap px-4 py-3">Invoice</th>
                   <th className="whitespace-nowrap px-4 py-3">Date</th>
                   <th className="px-4 py-3">Cashier</th>
+                  <th className="px-4 py-3">Salesman</th>
                   <th className="px-4 py-3">Customer</th>
                   <th className="whitespace-nowrap px-4 py-3 text-right">Total</th>
                   <th className="whitespace-nowrap px-4 py-3">Payment</th>
@@ -218,10 +246,17 @@ export function SalesHistoryPage() {
               <tbody>
                 {rows.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center text-sm text-ink-muted">No sales match your filters.</td>
+                    <td colSpan={9} className="px-4 py-12 text-center text-sm text-ink-muted">No sales match your filters.</td>
                   </tr>
                 ) : (
-                  rows.map((row) => <SaleTableRow key={row.id} row={row} onView={() => openDetail(row.id)} />)
+                  rows.map((row) => (
+                    <SaleTableRow
+                      key={row.id}
+                      row={row}
+                      onView={() => openDetail(row.id)}
+                      onPrint={wholesaleInvoices ? () => navigate(b2bPrintPath('invoice', row.id, true)) : undefined}
+                    />
+                  ))
                 )}
               </tbody>
             </table>
@@ -243,18 +278,48 @@ export function SalesHistoryPage() {
         ) : null}
       </div>
 
-      <SaleDetailModal saleId={detailSaleId} open={detailOpen} onClose={closeDetail} canRefund={canRefund} onRequestRefund={handleRequestRefund} />
-      <RefundSaleModal sale={refundSale} open={refundOpen} onClose={closeRefund} />
+      <SaleDetailModal
+        saleId={detailSaleId}
+        open={detailOpen}
+        onClose={closeDetail}
+        canRefund={canRefund}
+        onRequestRefund={handleRequestRefund}
+        onPrint={
+          wholesaleInvoices && detailSaleId
+            ? () => navigate(b2bPrintPath('invoice', detailSaleId, true))
+            : undefined
+        }
+      />
+      <RefundModal
+        open={refundOpen}
+        onClose={closeRefund}
+        sourceType={refundSourceType}
+        sourceId={refundSourceId}
+        sourceLabel={refundSourceLabel}
+      />
     </div>
   );
 }
 
-function SaleTableRow({ row, onView }: { row: SaleListRow; onView: () => void }) {
+function SaleTableRow({
+  row,
+  onView,
+  onPrint,
+}: {
+  row: SaleListRow;
+  onView: () => void;
+  onPrint?: () => void;
+}) {
   return (
     <tr className="border-b border-line transition-colors hover:bg-canvas">
       <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-primary-600">{row.invoiceNumber}</td>
       <td className="whitespace-nowrap px-4 py-3 text-ink-muted">{formatDateTime(row.createdAt)}</td>
       <td className="px-4 py-3 text-ink">{row.cashier.name || row.cashier.username}</td>
+      <td className="px-4 py-3 text-ink-muted">
+        {row.salesman
+          ? `${row.salesman.name}${row.salesman.salesmanIdCode ? ` (${row.salesman.salesmanIdCode})` : ''}`
+          : '—'}
+      </td>
       <td className="max-w-[200px] truncate px-4 py-3 text-ink-muted" title={row.customer?.name ?? ''}>{row.customer?.name ?? '—'}</td>
       <td className="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums text-ink">{formatMoney(row.total)}</td>
       <td className="whitespace-nowrap px-4 py-3">
@@ -264,9 +329,16 @@ function SaleTableRow({ row, onView }: { row: SaleListRow; onView: () => void })
         <Badge variant={saleBadgeVariant(row.status)} className="normal-case">{saleStatusLabel(row.status)}</Badge>
       </td>
       <td className="whitespace-nowrap px-4 py-3 text-right">
-        <Button type="button" variant="ghost" size="xs" onClick={onView} className="gap-1">
-          <Eye className="h-3.5 w-3.5" aria-hidden />View
-        </Button>
+        <div className="flex justify-end gap-1">
+          <Button type="button" variant="ghost" size="xs" onClick={onView} className="gap-1">
+            <Eye className="h-3.5 w-3.5" aria-hidden />View
+          </Button>
+          {onPrint ? (
+            <Button type="button" variant="ghost" size="xs" onClick={onPrint} className="gap-1">
+              <Printer className="h-3.5 w-3.5" aria-hidden />Print
+            </Button>
+          ) : null}
+        </div>
       </td>
     </tr>
   );

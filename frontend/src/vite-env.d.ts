@@ -34,4 +34,55 @@ interface Window {
     logSyncFailure: (info: { localId: string; message: string; code?: string }) => void;
     exportLogs: () => Promise<{ ok: boolean; canceled?: boolean; path?: string; message?: string }>;
   };
+  electronDesktop?: {
+    getInfo: () => Promise<{
+      packaged: boolean;
+      version: string;
+      backendUrl: string | null;
+      localServicesEnabled: boolean;
+    }>;
+  };
+  electronDesktopActivation?: {
+    getStatus: () => Promise<
+      | { activated: false }
+      | {
+          activated: true;
+          licenseToken?: string;
+          licensePublicKeyPem?: string;
+          clientId?: string;
+          businessType: 'RETAIL' | 'FOOD_BEVERAGE' | 'WHOLESALE';
+          planCode?: string;
+          businessName?: string;
+          ownerEmail?: string;
+          lifetimeLicense: boolean;
+          entitlements: {
+            supportActive: boolean | null;
+            cloudHostingActive: boolean | null;
+            updatesActive: boolean | null;
+            supportUntil?: string | null;
+            cloudHostingUntil?: string | null;
+            updatesUntil?: string | null;
+          };
+          activatedAt?: string;
+        }
+    >;
+    activate: (payload: {
+      activationCode: string;
+      deviceName?: string;
+    }) => Promise<
+      | { ok: true; requiresLocalOwnerSetup: boolean; status: unknown }
+      | { ok: false; code: string; message: string }
+    >;
+    reset: (payload: { confirm: true }) => Promise<{ ok: boolean; code?: string }>;
+  };
+  electronDesktopBackup?: {
+    exportBackup: () => Promise<{ ok: boolean; path?: string; error?: string }>;
+    restoreBackup: (opts: {
+      filePath?: string;
+      confirm: boolean;
+    }) => Promise<{ ok: boolean; canceled?: boolean; error?: string; safetyPath?: string }>;
+    listBackups: () => Promise<
+      Array<{ name: string; path: string; size: number; modifiedAt: string }>
+    >;
+  };
 }

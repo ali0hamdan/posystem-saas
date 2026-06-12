@@ -5,7 +5,15 @@ import { pingLicense } from '@/api/license.api';
 import { BYPASS_LICENSE } from '@/lib/env';
 import { useLicenseStore } from '@/stores/license-store';
 import { usePlanFeature } from '@/hooks/use-plan-features';
+import { useFeature, useBusinessType } from '@/hooks/use-tenant-context';
 import { Button } from '@/components/ui/button';
+
+const DESKTOP_APP_LABEL: Record<string, string> = {
+  RETAIL: 'Download Retail Desktop App',
+  FOOD_BEVERAGE: 'Download F&B Desktop App',
+  WHOLESALE: 'Download Wholesale Desktop App',
+  HYBRID: 'Download Hybrid Desktop App',
+};
 
 type PingData = {
   ok?: boolean;
@@ -15,9 +23,10 @@ type PingData = {
   expiresAt?: string | null;
   lockAfter?: string;
   graceDays?: number;
-  maxUsers?: number;
-  maxBranches?: number;
-  maxDevices?: number;
+  /** Null = unlimited (Desktop Lifetime). */
+  maxUsers?: number | null;
+  maxBranches?: number | null;
+  maxDevices?: number | null;
   warning?: boolean;
 };
 
@@ -79,7 +88,12 @@ export function BillingPage() {
   const bypass = BYPASS_LICENSE;
   const licToken = useLicenseStore((s) => s.token);
   const clearLicense = useLicenseStore((s) => s.clearLicense);
-  const canDownload = usePlanFeature('offline_mode');
+  // Desktop download is gated by the plan's desktop_download feature flag
+  // (set on PRO and all Desktop Lifetime plans) — not on normal monthly/yearly plans.
+  const desktopFeature = useFeature('desktop_download');
+  const offlineFallback = usePlanFeature('offline_mode');
+  const canDownload = desktopFeature || offlineFallback;
+  const businessType = useBusinessType();
 
   const q = useQuery({
     queryKey: ['license', 'ping', 'billing'],
@@ -189,19 +203,19 @@ export function BillingPage() {
           {d.maxUsers !== undefined && (
             <div>
               <dt className="text-xs uppercase text-gray-400 dark:text-gray-500 mb-0.5">Max users</dt>
-              <dd className="font-medium text-gray-900 dark:text-white">{d.maxUsers}</dd>
+              <dd className="font-medium text-gray-900 dark:text-white">{d.maxUsers ?? 'Unlimited'}</dd>
             </div>
           )}
           {d.maxBranches !== undefined && (
             <div>
               <dt className="text-xs uppercase text-gray-400 dark:text-gray-500 mb-0.5">Max branches</dt>
-              <dd className="font-medium text-gray-900 dark:text-white">{d.maxBranches}</dd>
+              <dd className="font-medium text-gray-900 dark:text-white">{d.maxBranches ?? 'Unlimited'}</dd>
             </div>
           )}
           {d.maxDevices !== undefined && (
             <div>
               <dt className="text-xs uppercase text-gray-400 dark:text-gray-500 mb-0.5">Max devices</dt>
-              <dd className="font-medium text-gray-900 dark:text-white">{d.maxDevices}</dd>
+              <dd className="font-medium text-gray-900 dark:text-white">{d.maxDevices ?? 'Unlimited'}</dd>
             </div>
           )}
         </dl>
@@ -237,7 +251,9 @@ export function BillingPage() {
             className="flex items-center justify-between rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors group"
           >
             <div>
-              <p className="text-sm font-medium text-blue-900 dark:text-blue-200">Download desktop app</p>
+              <p className="text-sm font-medium text-blue-900 dark:text-blue-200">
+                {(businessType && DESKTOP_APP_LABEL[businessType]) ?? 'Download Nezhin POS Desktop'}
+              </p>
               <p className="text-xs text-blue-600 dark:text-blue-400">Works offline — included in your plan</p>
             </div>
             <Download className="h-4 w-4 text-blue-500 group-hover:text-blue-700 dark:group-hover:text-blue-300" />

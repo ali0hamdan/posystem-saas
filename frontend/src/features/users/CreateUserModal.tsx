@@ -1,12 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Modal } from '@/components/ui/Modal';
+import { PasswordInput } from '@/components/ui/password-input';
 import { getApiErrorMessage } from '@/api/client';
 import { createUser } from '@/api/users.api';
+import type { RoleMeta } from '@/api/permissions.api';
 import { formatRoleLabel } from '@/lib/format-user';
 import type { UserRole } from '@/types/auth';
 
@@ -35,11 +37,30 @@ type FormValues = z.infer<ReturnType<typeof buildSchema>>;
 type CreateUserModalProps = {
   open: boolean;
   onClose: () => void;
-  allowedRoles: UserRole[];
+  roleOptions: RoleMeta[];
 };
 
-export function CreateUserModal({ open, onClose, allowedRoles }: CreateUserModalProps) {
+function PermissionPreview({ permissions }: { permissions: string[] }) {
+  const preview = permissions.slice(0, 10);
+  const rest = permissions.length - preview.length;
+  return (
+    <div className="rounded-lg border border-line bg-canvas px-3 py-2.5 text-xs text-ink-muted">
+      <p className="mb-1.5 font-semibold uppercase tracking-wide text-ink-faint">Access preview</p>
+      <ul className="flex flex-wrap gap-1">
+        {preview.map((p) => (
+          <li key={p} className="rounded bg-surface px-1.5 py-0.5 font-mono text-[11px] text-ink">
+            {p}
+          </li>
+        ))}
+        {rest > 0 ? <li className="px-1 py-0.5 text-ink-faint">+{rest} more</li> : null}
+      </ul>
+    </div>
+  );
+}
+
+export function CreateUserModal({ open, onClose, roleOptions }: CreateUserModalProps) {
   const queryClient = useQueryClient();
+  const allowedRoles = useMemo(() => roleOptions.map((r) => r.role), [roleOptions]);
   const schema = buildSchema(allowedRoles);
   const defaultRole = allowedRoles.includes('CASHIER') ? 'CASHIER' : allowedRoles[0];
 
@@ -54,6 +75,9 @@ export function CreateUserModal({ open, onClose, allowedRoles }: CreateUserModal
     },
   });
 
+  const selectedRole = form.watch('role') as UserRole | undefined;
+  const selectedMeta = roleOptions.find((r) => r.role === selectedRole);
+
   useEffect(() => {
     if (!open) return;
     form.reset({
@@ -67,8 +91,17 @@ export function CreateUserModal({ open, onClose, allowedRoles }: CreateUserModal
 
   const mutation = useMutation({
     mutationFn: createUser,
-    onSuccess: () => {
-      toast.success('User created');
+    onSuccess: (created) => {
+      if (created.role === 'SALESMAN' && created.salesmanIdCode) {
+        toast.success(`User created. Salesman ID: ${created.salesmanIdCode}`);
+      } else if (
+        (created.role === 'GENERAL_MANAGER' || created.role === 'CO_MANAGER') &&
+        created.approvalIdCode
+      ) {
+        toast.success(`User created. Approval ID: ${created.approvalIdCode}`);
+      } else {
+        toast.success('User created');
+      }
       void queryClient.invalidateQueries({ queryKey: ['users'] });
       onClose();
     },
@@ -171,23 +204,28 @@ export function CreateUserModal({ open, onClose, allowedRoles }: CreateUserModal
             className="w-full rounded-lg border border-line bg-canvas px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-500/25"
             {...form.register('role')}
           >
-            {allowedRoles.map((r) => (
-              <option key={r} value={r}>
-                {formatRoleLabel(r)}
+            {roleOptions.map((r) => (
+              <option key={r.role} value={r.role}>
+                {formatRoleLabel(r.role)}
               </option>
             ))}
           </select>
+          {selectedMeta?.description ? (
+            <p className="mt-1.5 text-xs text-ink-muted">{selectedMeta.description}</p>
+          ) : null}
           {form.formState.errors.role ? (
             <p className="mt-1 text-xs text-danger-600">{form.formState.errors.role.message}</p>
           ) : null}
         </div>
+        {selectedMeta?.permissions?.length ? (
+          <PermissionPreview permissions={selectedMeta.permissions} />
+        ) : null}
         <div>
           <label htmlFor="cu-password" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">
             Initial password
           </label>
-          <input
+          <PasswordInput
             id="cu-password"
-            type="password"
             autoComplete="new-password"
             className="w-full rounded-lg border border-line bg-canvas px-3 py-2.5 text-sm text-ink outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-500/25"
             {...form.register('password')}

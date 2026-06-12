@@ -20,11 +20,13 @@ import {
 } from 'lucide-react';
 import { fetchProductByBarcode, fetchProducts } from '@/api/products.api';
 import { fetchCustomer, fetchCustomers } from '@/api/customers.api';
+import { customerPickerLabel } from '@/lib/customer-display';
 import { validateCoupon, type CouponValidation } from '@/api/coupons.api';
 import { getApiErrorMessage } from '@/api/client';
 import { submitPosSale } from '@/offline/pos-submit-sale';
 import { cacheRecentSaleSnapshot } from '@/offline/cache-pull';
 import { getCachedProductByBarcodeOrSku, searchCachedProducts } from '@/offline/local-products';
+import { useAuthStore } from '@/stores/auth-store';
 import { useBranchStore } from '@/stores/branch-store';
 import { useConnectivityStore } from '@/stores/connectivity-store';
 import { usePosSaleSessionStore } from '@/stores/pos-sale-session-store';
@@ -32,6 +34,7 @@ import { useDebouncedValue } from '@/features/products/use-debounced-value';
 import { computePosTotals, productToCartLine, stockWarning, type CartLine } from '@/features/pos/pos-totals';
 import { findProductByExactBarcodeOrSku } from '@/features/pos/pos-scan';
 import { PosReceiptModal } from '@/features/pos/PosReceiptModal';
+import { SalesmanAssignmentField } from '@/features/commissions/SalesmanSelector';
 import { cn } from '@/lib/utils';
 import { useStoreSettings } from '@/hooks/use-store-settings';
 import { Button } from '@/components/ui/button';
@@ -170,6 +173,8 @@ export function PosPage() {
   const [customerSearch, setCustomerSearch] = useState('');
   const debouncedCustomerSearch = useDebouncedValue(customerSearch, 280);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [salesmanIdCode, setSalesmanIdCode] = useState('');
+  const me = useAuthStore((s) => s.user);
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<CouponValidation | null>(null);
 
@@ -284,6 +289,7 @@ export function PosPage() {
       setMixedB({ method: 'CARD', amount: 0 });
       setCustomerSearch('');
       setSelectedCustomerId(null);
+      setSalesmanIdCode('');
       setAppliedCoupon(null);
       setCouponInput('');
       if (!sale.invoiceNumber.startsWith('OFF-')) {
@@ -457,6 +463,11 @@ export function PosPage() {
       return;
     }
 
+    if (me?.role === 'CASHIER' && !salesmanIdCode.trim()) {
+      toast.error('Salesman ID is required.');
+      return;
+    }
+
     const body: CreateSaleBody = {
       ...(selectedCustomerId ? { customerId: selectedCustomerId } : {}),
       items: cart.map((l) => ({
@@ -468,6 +479,7 @@ export function PosPage() {
       ...(appliedCoupon ? { couponCode: appliedCoupon.code } : {}),
       globalDiscount: !appliedCoupon && globalDiscount > 0 ? round2(globalDiscount) : undefined,
       tax: tax > 0 ? round2(tax) : undefined,
+      ...(salesmanIdCode.trim() ? { salesmanIdCode: salesmanIdCode.trim().toUpperCase() } : {}),
     };
 
     saleMutation.mutate(body);
@@ -483,6 +495,8 @@ export function PosPage() {
     saleMutation,
     offlineSalesMode,
     selectedCustomerId,
+    salesmanIdCode,
+    me?.role,
   ]);
 
   useEffect(() => {
@@ -852,7 +866,7 @@ export function PosPage() {
                   {selectedCustomerId && selectedCustomerQuery.data ? (
                     <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-surface px-3 py-2">
                       <div className="min-w-0">
-                        <p className="truncate font-semibold text-ink">{selectedCustomerQuery.data.name}</p>
+                        <p className="truncate font-semibold text-ink">{customerPickerLabel(selectedCustomerQuery.data)}</p>
                         <p className="text-xs text-ink-muted">
                           Balance {fmt(Number(selectedCustomerQuery.data.balance))}
                           <Link
@@ -880,7 +894,7 @@ export function PosPage() {
                     type="search"
                     value={customerSearch}
                     onChange={(e) => setCustomerSearch(e.target.value)}
-                    placeholder="Search customer by name or phone…"
+                    placeholder="Search name, phone, email, company…"
                     className="mb-2 h-10 w-full rounded-lg border border-line bg-canvas px-3 text-sm outline-none focus:border-primary-300 focus:ring-2 focus:ring-primary-500/20"
                   />
                   {debouncedCustomerSearch.trim().length >= 1 && customersLookupQuery.isSuccess ? (
@@ -898,9 +912,9 @@ export function PosPage() {
                                 setCustomerSearch('');
                               }}
                             >
-                              <span className="font-medium text-ink">{c.name}</span>
+                              <span className="font-medium text-ink">{customerPickerLabel(c)}</span>
                               <span className="text-xs text-ink-muted">
-                                {c.phone || '—'} · balance {fmt(Number(c.balance))}
+                                Balance {fmt(Number(c.balance))}
                               </span>
                             </button>
                           </li>
@@ -911,6 +925,13 @@ export function PosPage() {
                 </>
               )}
             </div>
+
+            {!offlineSalesMode ? (
+              <SalesmanAssignmentField
+                salesmanIdCode={salesmanIdCode}
+                onSalesmanIdCodeChange={setSalesmanIdCode}
+              />
+            ) : null}
 
             {!offlineSalesMode && existingCustomerDebt >= 0.01 && selectedCustomerId ? (
               <div

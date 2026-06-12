@@ -81,9 +81,9 @@ export function SaasClientSubscriptionPage() {
             <Item label="Expires" value={formatSaasDate(sub.expiresAt)} />
             <Item label="Days remaining" value={String(daysUntil(sub.expiresAt))} />
             <Item label="Grace days" value={String(sub.graceDays)} />
-            <Item label="Max users" value={String(sub.maxUsers)} />
-            <Item label="Max branches" value={String(sub.maxBranches)} />
-            <Item label="Max devices" value={String(sub.maxDevices)} />
+            <Item label="Max users" value={sub.maxUsers ?? 'Unlimited'} />
+            <Item label="Max branches" value={sub.maxBranches ?? 'Unlimited'} />
+            <Item label="Max devices" value={sub.maxDevices ?? 'Unlimited'} />
           </dl>
         ) : (
           <p className="text-ink-muted">No subscription on file.</p>
@@ -93,9 +93,9 @@ export function SaasClientSubscriptionPage() {
       {usage ? (
         <SaasCard title="Usage vs limits">
           <dl className="grid gap-2 text-sm sm:grid-cols-3">
-            <Item label="Users" value={`${usage.users} / ${sub?.maxUsers ?? '—'}`} />
-            <Item label="Branches" value={`${usage.branches} / ${sub?.maxBranches ?? '—'}`} />
-            <Item label="Active devices" value={`${usage.devicesActive} / ${sub?.maxDevices ?? '—'}`} />
+            <Item label="Users" value={`${usage.users} / ${sub ? sub.maxUsers ?? 'Unlimited' : '—'}`} />
+            <Item label="Branches" value={`${usage.branches} / ${sub ? sub.maxBranches ?? 'Unlimited' : '—'}`} />
+            <Item label="Active devices" value={`${usage.devicesActive} / ${sub ? sub.maxDevices ?? 'Unlimited' : '—'}`} />
           </dl>
         </SaasCard>
       ) : null}

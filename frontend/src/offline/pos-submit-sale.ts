@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { createSale } from '@/api/sales.api';
+import { IS_DESKTOP_APP } from '@/lib/env';
 import { useAuthStore } from '@/stores/auth-store';
 import { useConnectivityStore, noteApiUnreachable } from '@/stores/connectivity-store';
 import { persistOfflineSale } from '@/offline/offline-write-sale';
@@ -16,10 +17,18 @@ export function isLikelyNetworkFailure(error: unknown): boolean {
 /**
  * Online-first sale creation. Uses the API when reachable; otherwise (or on network failure)
  * persists via IndexedDB and the offline sync queue.
+ *
+ * Packaged desktop never uses the IndexedDB queue: the local NestJS
+ * backend on 127.0.0.1:3001 IS the source of truth, so we always call
+ * the API directly and let errors propagate so the cashier sees them.
  */
 export async function submitPosSale(body: CreateSaleBody): Promise<CreatedSale> {
   const cashier = useAuthStore.getState().user;
   if (!cashier) throw new Error('Not signed in');
+
+  if (IS_DESKTOP_APP) {
+    return createSale(body);
+  }
 
   if (useConnectivityStore.getState().shouldUseOfflineSales()) {
     return persistOfflineSale(body, cashier);

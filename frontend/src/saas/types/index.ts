@@ -18,9 +18,20 @@ export type SaasMeResponse = {
 
 export type ClientStatus = 'ACTIVE' | 'SUSPENDED' | 'INACTIVE' | 'PENDING_PAYMENT';
 
-export type LicensePlanCode = 'STARTER' | 'BUSINESS' | 'PRO' | 'LIFETIME_DESKTOP' | 'ENTERPRISE';
+export type BusinessType = 'RETAIL' | 'FOOD_BEVERAGE' | 'WHOLESALE' | 'HYBRID';
 
-export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'SUSPENDED' | 'CANCELLED';
+export type LicensePlanCode =
+  | 'STARTER'
+  | 'BUSINESS'
+  | 'PRO'
+  | 'LIFETIME_DESKTOP'
+  | 'ENTERPRISE'
+  | 'RETAIL_DESKTOP_LIFETIME'
+  | 'FNB_DESKTOP_LIFETIME'
+  | 'WHOLESALE_DESKTOP_LIFETIME'
+  | 'HYBRID_DESKTOP_LIFETIME';
+
+export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'SUSPENDED' | 'CANCELLED' | 'LIFETIME';
 
 export type ActivationCodeStatus = 'UNUSED' | 'USED' | 'EXPIRED' | 'REVOKED';
 
@@ -32,6 +43,7 @@ export type SaasClientSummary = {
   email: string;
   phone: string | null;
   status: ClientStatus;
+  businessType: BusinessType;
   notes: string | null;
   supportNotes: string | null;
   deletedAt: string | null;
@@ -56,15 +68,25 @@ export type SaasClientDetail = {
   currentSubscription: {
     id: string;
     status: SubscriptionStatus;
+    billingCycle: 'MONTHLY' | 'YEARLY' | 'LIFETIME' | null;
+    isLifetime: boolean;
     startsAt: string;
-    expiresAt: string;
-    maxUsers: number;
-    maxBranches: number;
-    maxDevices: number;
+    expiresAt: string | null;
+    /** Null = unlimited (Desktop Lifetime). */
+    maxUsers: number | null;
+    maxBranches: number | null;
+    maxDevices: number | null;
     graceDays: number;
     planId: string;
   } | null;
-  plan: { id: string; code: LicensePlanCode; name: string } | null;
+  plan: {
+    id: string;
+    code: LicensePlanCode;
+    name: string;
+    type?: 'SUBSCRIPTION' | 'ONE_TIME';
+    businessType?: BusinessType | null;
+    allowsDesktopDownload?: boolean;
+  } | null;
   usersCount: number;
   branchesCount: number;
   devicesCount: number;
@@ -84,9 +106,10 @@ export type SaasPlan = {
   yearlyPrice: string | null;
   oneTimePrice: string | null;
   currency: string;
-  maxUsers: number;
-  maxBranches: number;
-  maxDevices: number;
+  /** Null = unlimited (Desktop Lifetime). */
+  maxUsers: number | null;
+  maxBranches: number | null;
+  maxDevices: number | null;
   features: Record<string, unknown>;
   allowsDesktopDownload: boolean;
   isActive: boolean;
@@ -104,9 +127,9 @@ export type ClientSubscriptionView = {
     startsAt: string;
     expiresAt: string;
     graceDays: number;
-    maxUsers: number;
-    maxBranches: number;
-    maxDevices: number;
+    maxUsers: number | null;
+    maxBranches: number | null;
+    maxDevices: number | null;
     plan: { id: string; code: LicensePlanCode; name: string; features: Record<string, unknown> };
   } | null;
   usage: { users: number; branches: number; devicesActive: number };
@@ -119,8 +142,8 @@ export type ActivationCodeRow = {
   usedCount: number;
   maxUses: number;
   label: string | null;
-  maxDevices: number;
-  maxBranches: number;
+  maxDevices: number | null;
+  maxBranches: number | null;
   graceDays: number;
   termDays: number;
   createdAt: string;
@@ -143,9 +166,9 @@ export type LicenseSubscriptionRow = {
   status: SubscriptionStatus;
   startsAt: string;
   expiresAt: string;
-  maxUsers: number;
-  maxBranches: number;
-  maxDevices: number;
+  maxUsers: number | null;
+  maxBranches: number | null;
+  maxDevices: number | null;
   graceDays: number;
   client: { id: string; businessName: string; email: string };
   plan: { id: string; code: LicensePlanCode; name: string };
@@ -198,6 +221,7 @@ export type PatchSaasClientBody = {
   ownerName?: string;
   email?: string;
   phone?: string | null;
+  businessType?: BusinessType;
   notes?: string | null;
   supportNotes?: string | null;
 };
@@ -250,9 +274,10 @@ export type PatchClientUserBody = {
 export type CreateSaasPlanBody = {
   code: LicensePlanCode;
   name: string;
-  maxUsers: number;
-  maxBranches: number;
-  maxDevices: number;
+  /** Omit for unlimited (Desktop Lifetime plans). */
+  maxUsers?: number;
+  maxBranches?: number;
+  maxDevices?: number;
   features?: Record<string, boolean>;
 };
 
@@ -268,6 +293,7 @@ export type PatchSaasPlanBody = {
   isActive?: boolean;
   sortOrder?: number;
   allowsDesktopDownload?: boolean;
+  features?: Record<string, boolean>;
 };
 
 export type CreateClientActivationCodeBody = {

@@ -3,10 +3,12 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar, readInitialSidebarCollapsed } from '@/components/layout/Sidebar';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { Topbar } from '@/components/layout/Topbar';
+import { RoutePermissionGate } from '@/components/auth/RoutePermissionGate';
 import { OfflineBootstrap } from '@/components/offline/OfflineBootstrap';
 import { LicenseShell } from '@/components/license/LicenseShell';
 import { ElectronUpdaterProvider } from '@/components/electron/ElectronUpdaterProvider';
 import { ElectronUpdateBanner } from '@/components/electron/ElectronUpdateBanner';
+import { DesktopEntitlementBanner } from '@/components/electron/DesktopEntitlementBanner';
 import { cn } from '@/lib/utils';
 
 export function AppLayout() {
@@ -52,8 +54,11 @@ export function AppLayout() {
           <div className="mx-auto max-w-[1600px]">
             <ElectronUpdaterProvider>
               <LicenseShell />
+              <DesktopEntitlementBanner />
               <ElectronUpdateBanner />
-              <Outlet />
+              <RoutePermissionGate>
+                <Outlet />
+              </RoutePermissionGate>
             </ElectronUpdaterProvider>
           </div>
         </main>

@@ -1,4 +1,5 @@
 import type { UserRole } from '@/types/auth';
+import type { SalesCommissionType } from '@/types/commissions';
 
 export type AdminUser = {
   id: string;
@@ -9,6 +10,16 @@ export type AdminUser = {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  commissionEnabled?: boolean;
+  commissionType?: SalesCommissionType | null;
+  commissionRate?: string | number | null;
+  fixedCommissionAmount?: string | number | null;
+  commissionNotes?: string | null;
+  salesmanIdCode?: string | null;
+  approvalIdCode?: string | null;
+  nfcEnabled?: boolean;
+  nfcCardRegistered?: boolean;
+  nfcCardMasked?: string | null;
 };
 
 export type PaginatedUsersResponse = {

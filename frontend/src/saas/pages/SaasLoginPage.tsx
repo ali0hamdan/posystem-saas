@@ -7,6 +7,7 @@ import { Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { FieldError, FieldLabel, TextInput } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { isSaasAccessToken } from '@/lib/saas-auth';
 import { saasLogin } from '@/saas/api/saas-auth.api';
 import { getSaasApiErrorMessage } from '@/saas/api/saas-client';
@@ -97,9 +98,8 @@ export function SaasLoginPage() {
               <FieldLabel htmlFor="password">
                 Password
               </FieldLabel>
-              <TextInput
+              <PasswordInput
                 id="password"
-                type="password"
                 autoComplete="current-password"
                 className="border-line bg-surface-muted text-ink"
                 {...register('password')}

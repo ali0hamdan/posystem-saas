@@ -5,6 +5,8 @@ import { Modal } from '@/components/ui/Modal';
 import { getApiErrorMessage } from '@/api/client';
 import { refundSale } from '@/api/sales.api';
 import { remainingItemQty } from '@/lib/sale-refund-helpers';
+import { RefundApprovalSection, buildRefundApprovalPayload, validateRefundApprovalInput } from '@/features/refunds/RefundApprovalSection';
+import { useStoreSettings } from '@/hooks/use-store-settings';
 import type { SaleDetail } from '@/types/sales-history';
 
 type RefundMode = 'full' | 'partial';
@@ -19,7 +21,12 @@ export function RefundSaleModal({ sale, open, onClose }: RefundSaleModalProps) {
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<RefundMode>('full');
   const [reason, setReason] = useState('');
+  const [approvalIdCode, setApprovalIdCode] = useState('');
+  const [nfcCardUid, setNfcCardUid] = useState('');
+  const [approvalPin, setApprovalPin] = useState('');
   const [partialQty, setPartialQty] = useState<Record<string, number>>({});
+  const { settings } = useStoreSettings();
+  const approvalMethod = settings?.refundApprovalMethod ?? 'APPROVAL_ID';
 
   const remaining = useMemo(() => (sale ? remainingItemQty(sale) : new Map<string, number>()), [sale]);
 
@@ -27,6 +34,9 @@ export function RefundSaleModal({ sale, open, onClose }: RefundSaleModalProps) {
     if (!open || !sale) return;
     setMode('full');
     setReason('');
+    setApprovalIdCode('');
+    setNfcCardUid('');
+    setApprovalPin('');
     const init: Record<string, number> = {};
     for (const it of sale.items) {
       init[it.id] = 0;
@@ -41,8 +51,19 @@ export function RefundSaleModal({ sale, open, onClose }: RefundSaleModalProps) {
       if (trimmed.length < 3) {
         throw new Error('Please enter a reason (at least 3 characters).');
       }
+      const approvalError = validateRefundApprovalInput(approvalMethod, {
+        approvalIdCode,
+        nfcCardUid,
+        approvalPin,
+      });
+      if (approvalError) throw new Error(approvalError);
+      const approvalPayload = buildRefundApprovalPayload(approvalMethod, {
+        approvalIdCode,
+        nfcCardUid,
+        approvalPin,
+      });
       if (mode === 'full') {
-        return refundSale(sale.id, { reason: trimmed, full: true });
+        return refundSale(sale.id, { reason: trimmed, full: true, ...approvalPayload });
       }
       const items = Object.entries(partialQty)
         .map(([saleItemId, quantity]) => ({ saleItemId, quantity }))
@@ -50,7 +71,7 @@ export function RefundSaleModal({ sale, open, onClose }: RefundSaleModalProps) {
       if (items.length === 0) {
         throw new Error('Select at least one line and quantity for a partial refund.');
       }
-      return refundSale(sale.id, { reason: trimmed, items });
+      return refundSale(sale.id, { reason: trimmed, items, ...approvalPayload });
     },
     onSuccess: async () => {
       toast.success('Refund recorded');
@@ -187,6 +208,16 @@ export function RefundSaleModal({ sale, open, onClose }: RefundSaleModalProps) {
             </div>
           ) : null}
 
+          <RefundApprovalSection
+            approvalIdCode={approvalIdCode}
+            onApprovalIdCodeChange={setApprovalIdCode}
+            nfcCardUid={nfcCardUid}
+            onNfcCardUidChange={setNfcCardUid}
+            approvalPin={approvalPin}
+            onApprovalPinChange={setApprovalPin}
+            disabled={busy}
+          />
+
           <div>
             <label htmlFor="refund-reason" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">
               Reason <span className="text-danger-500">*</span>
@@ -203,8 +234,8 @@ export function RefundSaleModal({ sale, open, onClose }: RefundSaleModalProps) {
           </div>
 
           <p className="text-xs text-ink-faint">
-            Totals are calculated on the server based on original line pricing. Stock will be returned for the quantities
-            refunded.
+            Refunds cannot be undone after completion. Totals are calculated on the server based on original line
+            pricing. Stock will be returned for the quantities refunded.
           </p>
         </div>
       )}

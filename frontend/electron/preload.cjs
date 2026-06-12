@@ -33,3 +33,26 @@ contextBridge.exposeInMainWorld('electronDiagnostics', {
   },
   exportLogs: () => ipcRenderer.invoke('electron-diagnostics:export-logs'),
 });
+
+contextBridge.exposeInMainWorld('electronDesktop', {
+  /** Returns { packaged, version, backendUrl, localServicesEnabled }. */
+  getInfo: () => ipcRenderer.invoke('desktop:get-info'),
+});
+
+contextBridge.exposeInMainWorld('electronDesktopActivation', {
+  /** { activated: false } before activation; otherwise the persisted license payload. */
+  getStatus: () => ipcRenderer.invoke('desktop-activation:status'),
+  /** Calls the hosted license server and persists the license locally. */
+  activate: (payload) => ipcRenderer.invoke('desktop-activation:activate', payload),
+  /** Clears the local license file. Requires { confirm: true }. */
+  reset: (payload) => ipcRenderer.invoke('desktop-activation:reset', payload || {}),
+});
+
+contextBridge.exposeInMainWorld('electronDesktopBackup', {
+  /** Trigger pg_dump to <ProgramData>/NezhinPOS/backups; returns { ok, path }. */
+  exportBackup: (opts) => ipcRenderer.invoke('desktop-backup:export', opts || {}),
+  /** Restore from a chosen .dump file; returns { ok }. */
+  restoreBackup: (opts) => ipcRenderer.invoke('desktop-backup:restore', opts || {}),
+  /** Lists backup files known to the local backups directory. */
+  listBackups: () => ipcRenderer.invoke('desktop-backup:list'),
+});

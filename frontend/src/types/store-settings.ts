@@ -1,5 +1,7 @@
 export type ReceiptPaperSize = 'MM58' | 'MM80';
 
+export type RefundApprovalMethod = 'APPROVAL_ID' | 'NFC_CARD' | 'NFC_CARD_AND_PIN';
+
 export type StoreSettings = {
   id: string;
   storeName: string;
@@ -16,6 +18,25 @@ export type StoreSettings = {
   receiptCopies: number;
   receiptShowLogo: boolean;
   receiptPrinterName: string | null;
+  quotationPrefix: string;
+  proformaPrefix: string;
+  invoicePrefix: string;
+  showTaxOnQuotation: boolean;
+  showSignatureArea: boolean;
+  deliveryNotePrefix: string;
+  defaultPaymentTermsDays: number;
+  enableCustomerCredit: boolean;
+  enableDeliveryNotes: boolean;
+  enableApprovalWorkflow: boolean;
+  allowOverCreditOverride: boolean;
+  allowOverStockOverride: boolean;
+  emailNotificationsEnabled: boolean;
+  notifyLowStock: boolean;
+  notifyInvoicePayment: boolean;
+  notifyCustomerOverdue: boolean;
+  notifySubscription: boolean;
+  notifyDeviceActivation: boolean;
+  refundApprovalMethod: RefundApprovalMethod;
   createdAt: string;
   updatedAt: string;
 };
@@ -35,4 +56,23 @@ export type PatchStoreSettingsBody = Partial<{
   receiptCopies: number;
   receiptShowLogo: boolean;
   receiptPrinterName: string | null;
+  quotationPrefix: string;
+  proformaPrefix: string;
+  invoicePrefix: string;
+  showTaxOnQuotation: boolean;
+  showSignatureArea: boolean;
+  deliveryNotePrefix: string;
+  defaultPaymentTermsDays: number;
+  enableCustomerCredit: boolean;
+  enableDeliveryNotes: boolean;
+  enableApprovalWorkflow: boolean;
+  allowOverCreditOverride: boolean;
+  allowOverStockOverride: boolean;
+  emailNotificationsEnabled: boolean;
+  notifyLowStock: boolean;
+  notifyInvoicePayment: boolean;
+  notifyCustomerOverdue: boolean;
+  notifySubscription: boolean;
+  notifyDeviceActivation: boolean;
+  refundApprovalMethod?: RefundApprovalMethod;
 }>;

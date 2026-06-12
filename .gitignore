@@ -14,9 +14,27 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 
+# Claude Code workspace metadata
+.claude/
+
+# Stray editor backup files
+*.backup.tsx
+*.backup.ts
+
 # Secrets and local env — keep `.env.example` files committed
 .env
 .env.local
 .env.production
 backend/.env
 frontend/.env
+
+# Desktop runtime — bundled PostgreSQL Windows binaries for the
+# installer. Large (hundreds of MB) and license-bound; populate manually
+# on the build machine. See frontend/electron/DESKTOP_PACKAGING.md.
+/desktop-runtime/
+
+# Electron-builder output (legacy in-tree path). New default is
+# %LOCALAPPDATA%\nezhin-builds on Windows when the repo is under a sync
+# root — see frontend/scripts/run-electron-builder.mjs. This entry only
+# covers the older `dist/` layout still seen on existing clones.
+/dist/

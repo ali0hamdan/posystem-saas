@@ -10,8 +10,17 @@ export type CustomerRow = {
   id: string;
   name: string;
   phone: string | null;
+  email: string | null;
+  address: string | null;
+  companyName: string | null;
+  taxNumber: string | null;
+  notes: string | null;
+  isActive: boolean;
   balance: string | number;
   loyaltyPoints: number;
+  creditLimit: string | null;
+  paymentTermsDays: number | null;
+  isCreditAllowed: boolean | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -33,15 +42,33 @@ export type CustomerLedgerEntry = {
 export type PaginatedCustomers = PaginatedResponse<CustomerRow>;
 export type PaginatedLedger = PaginatedResponse<CustomerLedgerEntry>;
 
-export type CreateCustomerBody = {
+export type CustomerFormBody = {
   name: string;
   phone?: string;
+  email?: string;
+  address?: string;
+  companyName?: string;
+  taxNumber?: string;
+  paymentTermsDays?: number;
+  creditLimit?: number;
+  notes?: string;
+  isActive?: boolean;
 };
 
-export type UpdateCustomerBody = {
-  name?: string;
-  phone?: string | null;
-};
+export type CreateCustomerBody = CustomerFormBody;
+
+export type UpdateCustomerBody = Partial<{
+  name: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  companyName: string | null;
+  taxNumber: string | null;
+  paymentTermsDays: number;
+  creditLimit: number;
+  notes: string | null;
+  isActive: boolean;
+}>;
 
 export type CustomerPaymentBody = {
   amount: number;

@@ -4,6 +4,7 @@ export type SaleItemLine = {
   productId: string;
   quantity: number;
   discount?: number;
+  unitPrice?: number;
 };
 
 export type SalePaymentRow = {
@@ -18,6 +19,8 @@ export type CreateSaleBody = {
   couponCode?: string;
   globalDiscount?: number;
   tax?: number;
+  salesmanId?: string;
+  salesmanIdCode?: string;
 };
 
 export type CreatedSaleProduct = {

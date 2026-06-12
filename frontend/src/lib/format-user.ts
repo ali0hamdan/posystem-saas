@@ -1,6 +1,10 @@
-/** Display label for API role enums (e.g. OWNER → Owner). */
+/** Display label for API role enums (e.g. GENERAL_MANAGER → General Manager). */
 export function formatRoleLabel(role: string | undefined): string {
   if (!role) return '—';
-  const lower = role.toLowerCase();
-  return lower.charAt(0).toUpperCase() + lower.slice(1);
+  return role
+    .toLowerCase()
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+    .replace(/^Co Manager$/, 'Co-Manager');
 }

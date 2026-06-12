@@ -9,6 +9,7 @@ import { DataTable, DataTableShell, Td, Th } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FieldLabel, SelectInput, TextInput } from '@/components/ui/input';
 import { Modal } from '@/components/ui/Modal';
+import { PasswordInput } from '@/components/ui/password-input';
 import { createClientUser, deleteClientUser, fetchClientUsers, patchClientUser, patchClientUserPassword, patchClientUserStatus } from '@/saas/api/saas-clients.api';
 import { getSaasApiErrorMessage } from '@/saas/api/saas-client';
 import { SaasCard } from '@/saas/components/SaasCard';
@@ -312,7 +313,7 @@ export function SaasClientUsersPage() {
           </div>
           <div className="sm:col-span-2">
             <FieldLabel htmlFor="u-password">Password</FieldLabel>
-            <TextInput id="u-password" type="password" value={form.password} onChange={(e) => setForm((s) => ({ ...s, password: e.target.value }))} />
+            <PasswordInput id="u-password" value={form.password} onChange={(e) => setForm((s) => ({ ...s, password: e.target.value }))} />
           </div>
         </div>
       </Modal>
@@ -416,7 +417,7 @@ export function SaasClientUsersPage() {
       >
         <div>
           <FieldLabel htmlFor="reset-pass">New password</FieldLabel>
-          <TextInput id="reset-pass" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+          <PasswordInput id="reset-pass" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
         </div>
       </Modal>
 

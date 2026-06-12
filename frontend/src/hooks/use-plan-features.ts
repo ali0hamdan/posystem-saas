@@ -56,6 +56,39 @@ const PLAN_FEATURES: Record<string, Record<string, boolean>> = {
     coupons: true,
     offline_mode: true,
   },
+  // Business-type-specific Desktop Lifetime plans (one-time payment).
+  RETAIL_DESKTOP_LIFETIME: {
+    basic_pos: true,
+    inventory: true,
+    reports: true,
+    multi_branch: false,
+    coupons: false,
+    offline_mode: true,
+  },
+  FNB_DESKTOP_LIFETIME: {
+    basic_pos: true,
+    inventory: true,
+    reports: true,
+    multi_branch: false,
+    coupons: false,
+    offline_mode: true,
+  },
+  WHOLESALE_DESKTOP_LIFETIME: {
+    basic_pos: true,
+    inventory: true,
+    reports: true,
+    multi_branch: false,
+    coupons: false,
+    offline_mode: true,
+  },
+  HYBRID_DESKTOP_LIFETIME: {
+    basic_pos: true,
+    inventory: true,
+    reports: true,
+    multi_branch: true,
+    coupons: false,
+    offline_mode: true,
+  },
 };
 
 /**

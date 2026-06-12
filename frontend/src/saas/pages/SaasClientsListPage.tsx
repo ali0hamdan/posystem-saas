@@ -16,6 +16,7 @@ import { useSaasPermissions } from '@/saas/hooks/use-saas-permissions';
 import { getSaasApiErrorMessage } from '@/saas/api/saas-client';
 import { formatSaasDate } from '@/saas/lib/format-date';
 import { saasFormFieldClass } from '@/saas/lib/form-styles';
+import { BUSINESS_TYPE_LABELS } from '@/lib/business-routing';
 import type { ClientStatus, LicensePlanCode } from '@/saas/types';
 
 type Mode = 'all' | 'suspended' | 'expiring' | 'pending';
@@ -148,6 +149,7 @@ export function SaasClientsListPage({ mode = 'all' }: { mode?: Mode }) {
               <thead>
                 <tr>
                   <Th>Business</Th>
+                  <Th>Type</Th>
                   <Th>Owner</Th>
                   <Th>Email</Th>
                   <Th>Status</Th>
@@ -167,6 +169,7 @@ export function SaasClientsListPage({ mode = 'all' }: { mode?: Mode }) {
                     return (
                       <tr key={c.id} className="hover:bg-canvas">
                         <Td className="font-medium text-ink">{c.businessName}</Td>
+                        <Td className="text-ink-muted">{BUSINESS_TYPE_LABELS[c.businessType] ?? 'Retail'}</Td>
                         <Td className="text-ink-muted">{c.ownerName}</Td>
                         <Td className="text-ink-muted">{c.email}</Td>
                         <Td>

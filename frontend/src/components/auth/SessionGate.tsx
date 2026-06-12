@@ -55,10 +55,12 @@ export function SessionGate({ children }: { children: ReactNode }) {
   useLayoutEffect(() => {
     const next = query.data?.user;
     const branches = query.data?.branches;
+    const permissions = query.data?.permissions ?? [];
     if (!query.isSuccess || !next || !accessToken) return;
     const prev = useAuthStore.getState().user;
-    if (!sameUser(prev, next)) {
-      setSession(accessToken, next);
+    const prevPerms = useAuthStore.getState().permissions;
+    if (!sameUser(prev, next) || prevPerms.join(',') !== permissions.join(',')) {
+      setSession(accessToken, next, permissions);
     }
     if (branches?.length) {
       useBranchStore.getState().hydrateBranches(branches);

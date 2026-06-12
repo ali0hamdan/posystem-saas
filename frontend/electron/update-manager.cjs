@@ -9,6 +9,73 @@ const CHANNEL = 'electron-updater';
 
 let managerInstalled = false;
 
+/**
+ * Reads the persisted local-activation license file and returns a reason
+ * string if the customer's updates entitlement is explicitly disabled.
+ * Unknown/missing → null (don't block; preserves backward compatibility
+ * for license files written before the entitlement field landed).
+ */
+function checkUpdatesEntitlement(log) {
+  try {
+    const { getPaths } = require('./desktop-paths.cjs');
+    const fs = require('node:fs');
+    const { licenseFile } = getPaths();
+    if (!fs.existsSync(licenseFile)) return null;
+    const text = fs.readFileSync(licenseFile, 'utf8');
+    const parsed = text ? JSON.parse(text) : null;
+    const updatesActive = parsed?.entitlements?.updatesActive;
+    if (updatesActive === false) {
+      return 'Updates expired. Renew your Desktop Care Plan to receive new updates.';
+    }
+    return null;
+  } catch (e) {
+    if (log && typeof log.warn === 'function') {
+      log.warn('[updater] entitlement check failed', e);
+    }
+    return null;
+  }
+}
+
+/**
+ * Returns a human-readable reason string when auto-update must be turned
+ * off in this packaged build, otherwise null.
+ *   - `DESKTOP_DISABLE_UPDATES=1` → explicit opt-out
+ *   - license.json says `entitlements.updatesActive === false` → the
+ *     customer's Desktop Care Plan updates entitlement has expired
+ *   - publish URL still has the example.com placeholder AND no
+ *     `DESKTOP_UPDATE_URL` runtime override → misconfiguration; we refuse
+ *     to query a placeholder host on every boot.
+ */
+function resolveDisabledReason(log) {
+  if (process.env.DESKTOP_DISABLE_UPDATES === '1') {
+    return 'Auto-update disabled by DESKTOP_DISABLE_UPDATES=1.';
+  }
+  const entitlementReason = checkUpdatesEntitlement(log);
+  if (entitlementReason) return entitlementReason;
+  if (process.env.DESKTOP_UPDATE_URL && process.env.DESKTOP_UPDATE_URL.trim()) {
+    return null;
+  }
+  // electron-updater reads the publish URL from app-update.yml at runtime.
+  // We mirror the build-time check the preflight script does so the app
+  // never silently checks an example.com placeholder in the field.
+  try {
+    const path = require('node:path');
+    const fs = require('node:fs');
+    const yamlPath = path.join(process.resourcesPath || '', 'app-update.yml');
+    if (fs.existsSync(yamlPath)) {
+      const text = fs.readFileSync(yamlPath, 'utf8');
+      if (/example\.com/i.test(text)) {
+        return 'Auto-update disabled: publish URL is still the example.com placeholder. Set DESKTOP_UPDATE_URL or rebuild with a real publish URL.';
+      }
+    }
+  } catch (e) {
+    if (log && typeof log.warn === 'function') {
+      log.warn('[updater] could not inspect app-update.yml', e);
+    }
+  }
+  return null;
+}
+
 /** @param {import('electron').BrowserWindow | null} getWindow */
 function setupUpdateManager(getWindow, log) {
   if (managerInstalled) {
@@ -49,6 +116,37 @@ function setupUpdateManager(getWindow, log) {
       return { ok: false, skipped: true };
     });
     return;
+  }
+
+  // Safety: if the updater is misconfigured (publish URL still points at
+  // example.com, or DESKTOP_DISABLE_UPDATES=1), do NOT start checking. We
+  // refuse to spam a placeholder host or a stale CDN every startup.
+  const disabledReason = resolveDisabledReason(log);
+  if (disabledReason) {
+    log.warn('[updater] auto-update disabled:', disabledReason);
+    ipcMain.handle(`${CHANNEL}:check`, async () => {
+      send({ phase: 'disabled', message: disabledReason });
+      return { ok: false, skipped: true, message: disabledReason };
+    });
+    ipcMain.handle(`${CHANNEL}:quit-install`, async () => ({
+      ok: false,
+      skipped: true,
+      message: disabledReason,
+    }));
+    send({ phase: 'disabled', message: disabledReason });
+    return;
+  }
+
+  // Optional runtime override (CI builds can swap the feed without
+  // editing package.json).
+  const runtimeFeed = (process.env.DESKTOP_UPDATE_URL || '').trim();
+  if (runtimeFeed) {
+    try {
+      autoUpdater.setFeedURL({ provider: 'generic', url: runtimeFeed });
+      log.info('[updater] feed URL overridden via DESKTOP_UPDATE_URL', runtimeFeed);
+    } catch (e) {
+      log.warn('[updater] setFeedURL failed', e);
+    }
   }
 
   autoUpdater.logger = log;

@@ -28,6 +28,8 @@ function statusLabel(payload: ReturnType<typeof useElectronUpdater>['payload']):
       return 'App is up to date';
     case 'error':
       return 'Update failed';
+    case 'disabled':
+      return payload.message?.trim() ? payload.message : 'Updates disabled';
     case 'idle':
     default:
       return payload.message?.trim() ? payload.message : 'Idle';
@@ -118,7 +120,7 @@ export function ElectronUpdatePanel() {
             <Button
               type="button"
               variant="secondary"
-              disabled={payload.phase === 'checking'}
+              disabled={payload.phase === 'checking' || payload.phase === 'disabled'}
               onClick={() => void checkNow()}
             >
               Check for updates

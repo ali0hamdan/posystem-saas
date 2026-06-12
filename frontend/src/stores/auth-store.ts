@@ -7,7 +7,8 @@ import { useBranchStore } from '@/stores/branch-store';
 type AuthState = {
   accessToken: string | null;
   user: AuthUser | null;
-  setSession: (accessToken: string, user: AuthUser) => void;
+  permissions: string[];
+  setSession: (accessToken: string, user: AuthUser, permissions?: string[]) => void;
   clearAuth: () => void;
 };
 
@@ -16,16 +17,17 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       accessToken: null,
       user: null,
-      setSession: (accessToken, user) => {
+      permissions: [],
+      setSession: (accessToken, user, permissions = []) => {
         if (!isStoreAccessToken(accessToken)) {
-          set({ accessToken: null, user: null });
+          set({ accessToken: null, user: null, permissions: [] });
           return;
         }
-        set({ accessToken: accessToken.trim(), user });
+        set({ accessToken: accessToken.trim(), user, permissions });
       },
       clearAuth: () => {
         useBranchStore.getState().clearBranches();
-        set({ accessToken: null, user: null });
+        set({ accessToken: null, user: null, permissions: [] });
       },
     }),
     {
@@ -34,6 +36,7 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         accessToken: state.accessToken,
         user: state.user,
+        permissions: state.permissions,
       }),
     },
   ),
