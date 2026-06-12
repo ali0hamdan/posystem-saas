@@ -19,7 +19,7 @@ import type { OnboardingBusinessType } from '@/api/public.api';
 export const HERO_HIGHLIGHT = 'Launch your POS in minutes';
 
 export const HERO_SUBHEADLINE =
-  'Choose your system, select a package, verify your email, and start managing sales, inventory, invoices, customers, and reports from one secure dashboard.';
+  'Manage sales, inventory, invoices, customers, and reports from one secure dashboard.';
 
 export const ONBOARDING_STEPS: { title: string; description: string }[] = [
   {

@@ -255,9 +255,79 @@ function Hero() {
 
   return (
     <section className="relative overflow-hidden pt-28 sm:pt-36">
+      {/* Layer 1 — base wash. A long vertical gradient that quietly tints the
+          canvas indigo before any of the accent orbs land on top. */}
       <div
-        className={`pointer-events-none absolute inset-0 ${dark ? 'bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(99,102,241,0.18),transparent)]' : 'bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(79,70,229,0.12),transparent)]'}`}
+        aria-hidden
+        className={`pointer-events-none absolute inset-0 ${
+          dark
+            ? 'bg-[linear-gradient(180deg,rgba(99,102,241,0.06)_0%,rgba(15,23,42,0)_60%,rgba(15,23,42,0)_100%)]'
+            : 'bg-[linear-gradient(180deg,rgba(238,242,255,0.9)_0%,rgba(248,250,255,0.6)_55%,rgba(255,255,255,0)_100%)]'
+        }`}
       />
+
+      {/* Layer 2 — dot grid. Very low-opacity 24px lattice for the "premium
+          blueprint" feel. Pure CSS so no asset to ship. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage: `radial-gradient(circle at 1px 1px, ${
+            dark ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.06)'
+          } 1px, transparent 0)`,
+          backgroundSize: '24px 24px',
+          maskImage:
+            'radial-gradient(ellipse 70% 55% at 50% 30%, black 60%, transparent 100%)',
+          WebkitMaskImage:
+            'radial-gradient(ellipse 70% 55% at 50% 30%, black 60%, transparent 100%)',
+        }}
+      />
+
+      {/* Layer 3a — violet orb, top-left. Sits behind the headline; gives the
+          eyebrow pill its glow. */}
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute -left-24 -top-32 h-[28rem] w-[28rem] rounded-full blur-3xl ${
+          dark
+            ? 'bg-[radial-gradient(circle,rgba(139,92,246,0.22),transparent_70%)]'
+            : 'bg-[radial-gradient(circle,rgba(139,92,246,0.32),transparent_70%)]'
+        }`}
+      />
+
+      {/* Layer 3b — sky-blue orb, top-right. Balances the violet on the
+          opposite side; both bleed in from beyond the viewport. */}
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute -right-32 -top-20 h-[26rem] w-[26rem] rounded-full blur-3xl ${
+          dark
+            ? 'bg-[radial-gradient(circle,rgba(56,189,248,0.18),transparent_70%)]'
+            : 'bg-[radial-gradient(circle,rgba(96,165,250,0.26),transparent_70%)]'
+        }`}
+      />
+
+      {/* Layer 3c — indigo halo, centered behind the headline. Replaces the
+          original single radial gradient with a softer, larger ellipse so the
+          headline reads on a calm pool of color. */}
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute left-1/2 top-24 h-[34rem] w-[46rem] -translate-x-1/2 rounded-full blur-3xl ${
+          dark
+            ? 'bg-[radial-gradient(ellipse,rgba(99,102,241,0.20),transparent_70%)]'
+            : 'bg-[radial-gradient(ellipse,rgba(99,102,241,0.22),transparent_70%)]'
+        }`}
+      />
+
+      {/* Layer 4 — bottom blend. Fades the layered backdrop into bg-canvas so
+          the next section (OnboardingSteps) joins seamlessly. */}
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute inset-x-0 bottom-0 h-40 ${
+          dark
+            ? 'bg-[linear-gradient(180deg,transparent_0%,var(--color-canvas,#0a0a14)_100%)]'
+            : 'bg-[linear-gradient(180deg,transparent_0%,var(--color-canvas,#ffffff)_100%)]'
+        }`}
+      />
+
       <div className="relative mx-auto max-w-6xl px-6 pb-16">
         <div className="mx-auto max-w-3xl text-center">
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE }}>
@@ -273,7 +343,7 @@ function Hero() {
             transition={{ duration: 0.8, delay: 0.08, ease: EASE }}
             className={`mt-6 text-[2rem] font-semibold leading-[1.1] tracking-[-0.02em] sm:text-5xl lg:text-[3.25rem] ${dark ? 'text-white' : 'text-ink'}`}
           >
-            One POS platform for Retail, Restaurants, and Wholesale businesses.
+            Sell. Track. Grow.
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 18 }}
