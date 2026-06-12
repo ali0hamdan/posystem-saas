@@ -111,7 +111,8 @@ export function SaasSubscriptionsPage() {
               </thead>
               <tbody>
                 {rows.map((s) => {
-                  const days = daysUntil(s.expiresAt);
+                  const isLifetime = s.status === 'LIFETIME';
+                  const days = isLifetime ? null : daysUntil(s.expiresAt);
                   return (
                     <tr key={s.id} className="hover:bg-canvas">
                       <Td>
@@ -127,19 +128,25 @@ export function SaasSubscriptionsPage() {
                       <Td>
                         <SaasStatusBadge status={s.status} />
                       </Td>
-                      <Td className="text-ink-muted">{formatSaasDate(s.expiresAt)}</Td>
+                      <Td className="text-ink-muted">
+                        {isLifetime ? 'Never (lifetime)' : formatSaasDate(s.expiresAt)}
+                      </Td>
                       <Td>
-                        <span
-                          className={
-                            days < 0
-                              ? 'text-danger-600 font-medium'
-                              : days <= 14
-                              ? 'text-warning-600 font-medium'
-                              : 'text-ink-muted'
-                          }
-                        >
-                          {days}d
-                        </span>
+                        {isLifetime ? (
+                          <span className="text-ink-muted">∞</span>
+                        ) : (
+                          <span
+                            className={
+                              (days as number) < 0
+                                ? 'text-danger-600 font-medium'
+                                : (days as number) <= 14
+                                ? 'text-warning-600 font-medium'
+                                : 'text-ink-muted'
+                            }
+                          >
+                            {days}d
+                          </span>
+                        )}
                       </Td>
                       <Td className="text-xs text-ink-muted">
                         {s.maxUsers ?? '∞'}u · {s.maxBranches ?? '∞'}b · {s.maxDevices ?? '∞'}d

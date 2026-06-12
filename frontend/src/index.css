@@ -6,40 +6,38 @@
 
 @layer base {
   :root {
-    /* Canvas — page background */
-    --color-canvas: 248 250 252;
-    --color-canvas-raised: 241 245 249;
-
-    /* Surface — card/panel backgrounds */
+    /* Light mode — warm off-white canvas to complement the orange brand
+       without ever competing with text. Surfaces stay pure white so cards
+       still feel "lifted" against the canvas. Borders are slightly warmed
+       so they don't read as cool gray next to orange CTAs. */
+    --color-canvas: 255 250 245;        /* #fffaf5 — warm off-white */
+    --color-canvas-raised: 255 247 237; /* #fff7ed — orange-50 */
     --color-surface: 255 255 255;
-    --color-surface-muted: 248 250 252;
-
-    /* Borders */
-    --color-line: 226 232 240;
-    --color-line-strong: 148 163 184;
-
-    /* Text */
+    --color-surface-muted: 253 246 234; /* tinted toward warm */
+    --color-line: 231 222 211;          /* warm-tinted slate */
+    --color-line-strong: 168 154 139;
     --color-ink: 15 23 42;
     --color-ink-muted: 71 85 105;
     --color-ink-faint: 148 163 184;
-
-    /* Sidebar-specific (always light in light mode) */
     --sidebar-bg: 255 255 255;
-    --sidebar-border: 226 232 240;
+    --sidebar-border: 231 222 211;
   }
 
   .dark {
-    --color-canvas: 10 15 28;
-    --color-canvas-raised: 15 21 38;
-    --color-surface: 17 25 44;
-    --color-surface-muted: 22 32 54;
-    --color-line: 30 41 66;
-    --color-line-strong: 51 65 100;
-    --color-ink: 241 245 249;
-    --color-ink-muted: 148 163 184;
-    --color-ink-faint: 71 85 105;
-    --sidebar-bg: 13 18 36;
-    --sidebar-border: 30 41 66;
+    /* Dark mode — neutral near-black base. Orange accents read warmer
+       against a neutral background than against a blue-tinted one; the
+       previous indigo-tinted dark theme would clash with the new brand. */
+    --color-canvas: 15 15 17;           /* #0f0f11 — neutral near-black */
+    --color-canvas-raised: 20 20 23;
+    --color-surface: 24 24 27;          /* zinc-900-ish */
+    --color-surface-muted: 28 28 32;
+    --color-line: 39 39 43;
+    --color-line-strong: 63 63 70;
+    --color-ink: 250 250 250;
+    --color-ink-muted: 161 161 170;
+    --color-ink-faint: 113 113 122;
+    --sidebar-bg: 20 20 23;
+    --sidebar-border: 39 39 43;
   }
 
   /* SaaS admin marker class — no forced dark; follows html.dark like the rest of the app */

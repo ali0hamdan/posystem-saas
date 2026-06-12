@@ -4,6 +4,7 @@ import { Navigate } from 'react-router-dom';
 import { isSaasAccessToken } from '@/lib/saas-auth';
 import { saasFetchMe } from '@/saas/api/saas-auth.api';
 import { useSaasAuthStore } from '@/saas/stores/saas-auth-store';
+import { saasPath } from '@/saas/config/saas-paths';
 
 export function SaasSessionGate({ children }: { children: React.ReactNode }) {
   const token = useSaasAuthStore((s) => s.accessToken);
@@ -35,7 +36,7 @@ export function SaasSessionGate({ children }: { children: React.ReactNode }) {
   }, [meQuery.isError, token, clearAuth]);
 
   if (!tokenValid) {
-    return <Navigate to="/saas/login" replace />;
+    return <Navigate to={saasPath('/login')} replace />;
   }
 
   if (meQuery.isLoading) {
@@ -47,7 +48,7 @@ export function SaasSessionGate({ children }: { children: React.ReactNode }) {
   }
 
   if (meQuery.isError) {
-    return <Navigate to="/saas/login" replace />;
+    return <Navigate to={saasPath('/login')} replace />;
   }
 
   return <>{children}</>;

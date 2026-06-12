@@ -75,7 +75,41 @@ export const envValidationSchema = Joi.object({
   THROTTLE_TTL_MS: Joi.number().integer().min(1000).max(3_600_000).optional(),
   THROTTLE_LIMIT: Joi.number().integer().min(1).max(1_000_000).optional(),
   TRUST_PROXY: Joi.string().valid('0', '1', 'true', 'false', 'yes', 'no', '').optional(),
+  /**
+   * Optional URL prefix for the SaaS Super Admin API. When set to something
+   * other than the default `saas`, the SaaS admin endpoints are reachable
+   * only via `/${SAAS_ADMIN_API_PREFIX}/...` and the well-known
+   * `/saas/...` paths return 404. This is anti-discovery hardening — auth
+   * + role guards remain in place regardless.
+   *
+   * Letters, digits, hyphens, and underscores only. Slashes are stripped
+   * by the middleware so it must be a single path segment.
+   */
+  SAAS_ADMIN_API_PREFIX: Joi.string()
+    .trim()
+    .pattern(/^[A-Za-z0-9_-]+$/)
+    .min(1)
+    .max(64)
+    .optional(),
   BYPASS_LICENSE: Joi.boolean().truthy('true', '1', 'yes').falsy('false', '0', 'no').default(false),
+  /**
+   * Enables `POST /public/payments/:id/simulate-success`. Must NEVER be true
+   * in production — leaving it true on a staging/preview environment lets
+   * anyone with a pending payment id activate a subscription without paying.
+   * Joi rejects the truthy value when NODE_ENV === 'production'.
+   */
+  ENABLE_PAYMENT_SIMULATION: Joi.boolean()
+    .truthy('true', '1', 'yes')
+    .falsy('false', '0', 'no')
+    .default(false)
+    .when('NODE_ENV', {
+      is: 'production',
+      then: Joi.boolean().valid(false).messages({
+        'any.only':
+          'ENABLE_PAYMENT_SIMULATION must be false in production. Real payments must use the gateway.',
+      }),
+      otherwise: Joi.boolean(),
+    }),
   LICENSE_RSA_PRIVATE_KEY_B64: Joi.string().trim().allow('').optional(),
   LICENSE_RSA_PUBLIC_KEY_B64: Joi.string().trim().allow('').optional(),
   LICENSE_VALIDATION_CACHE_MS: Joi.number().integer().min(1000).max(600_000).optional(),

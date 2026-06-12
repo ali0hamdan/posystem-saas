@@ -8,6 +8,7 @@ import { getSaasApiErrorMessage } from '@/saas/api/saas-client';
 import { useSaasAuthStore } from '@/saas/stores/saas-auth-store';
 import { SaasStatusBadge } from '@/saas/components/SaasStatusBadge';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { saasPath } from '@/saas/config/saas-paths';
 
 export function SaasTopbar() {
   const navigate = useNavigate();
@@ -20,13 +21,13 @@ export function SaasTopbar() {
     onSettled: () => {
       clearAuth();
       qc.removeQueries({ queryKey: ['saas'] });
-      navigate('/saas/login', { replace: true });
+      navigate(saasPath('/login'), { replace: true });
       toast.success('Signed out');
     },
     onError: (err) => {
       clearAuth();
       qc.removeQueries({ queryKey: ['saas'] });
-      navigate('/saas/login', { replace: true });
+      navigate(saasPath('/login'), { replace: true });
       toast.error(getSaasApiErrorMessage(err, 'Signed out locally'));
     },
   });

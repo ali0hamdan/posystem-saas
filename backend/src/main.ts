@@ -9,6 +9,7 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { initBackendSentry } from './instrumentation/sentry.instrumentation';
 import { SanitizeInterceptor } from './common/interceptors/sanitize.interceptor';
+import { createSaasAdminPrefixMiddleware } from './saas/saas-admin-prefix.middleware';
 
 async function bootstrap(): Promise<void> {
   initBackendSentry();
@@ -25,6 +26,13 @@ async function bootstrap(): Promise<void> {
   }
 
   app.disable('x-powered-by');
+
+  // SaaS Super Admin URL hardening. Rewrites the deployment-configured
+  // `/${SAAS_ADMIN_API_PREFIX}/...` to the internal `/saas/...` so the
+  // controllers don't change; blocks the default `/saas/...` when a custom
+  // prefix is in use; always adds `X-Robots-Tag: noindex, nofollow` on
+  // admin responses. Safe no-op when no env is set.
+  app.use(createSaasAdminPrefixMiddleware());
 
   const isProd = config.get<string>('app.nodeEnv') === 'production';
 

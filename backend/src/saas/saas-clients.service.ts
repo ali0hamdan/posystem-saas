@@ -1028,6 +1028,16 @@ export class SaasClientsService {
     if (!sub) {
       throw new NotFoundException({ message: 'No subscription for client', code: 'SUBSCRIPTION_NOT_FOUND' });
     }
+    // Desktop Lifetime customers paid $999 once — there is no period to renew.
+    // Refuse here so a SaaS BILLING admin cannot accidentally convert a
+    // LIFETIME row to ACTIVE-with-expiry (which would lock them out after the
+    // new expiry passes).
+    if (sub.status === SubscriptionStatus.LIFETIME) {
+      throw new BadRequestException({
+        message: 'Lifetime subscriptions do not need renewal.',
+        code: 'SUBSCRIPTION_LIFETIME_NOT_RENEWABLE',
+      });
+    }
     if (sub.status === SubscriptionStatus.SUSPENDED) {
       throw new BadRequestException({
         message: 'Subscription is suspended; reactivate before renewing',
@@ -1036,10 +1046,13 @@ export class SaasClientsService {
     }
     const baseMs = Math.max(sub.expiresAt?.getTime() ?? Date.now(), Date.now());
     const newExpiresAt = new Date(baseMs + dto.extendDays * 86_400_000);
+    const periodStart = new Date();
     const updated = await this.prisma.subscription.update({
       where: { id: sub.id },
       data: {
         expiresAt: newExpiresAt,
+        currentPeriodStart: periodStart,
+        currentPeriodEnd: newExpiresAt,
         status: SubscriptionStatus.ACTIVE,
       },
     });

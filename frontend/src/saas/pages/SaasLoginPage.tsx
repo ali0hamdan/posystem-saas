@@ -14,6 +14,8 @@ import { getSaasApiErrorMessage } from '@/saas/api/saas-client';
 import { useSaasAuthHydrated } from '@/saas/hooks/use-saas-auth-hydrated';
 import { useSaasAuthStore } from '@/saas/stores/saas-auth-store';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { SAAS_ADMIN_BASE_PATH, saasPath } from '@/saas/config/saas-paths';
+import { useSaasNoindex } from '@/saas/hooks/use-saas-noindex';
 
 const schema = z.object({
   email: z.string().email('Valid email required'),
@@ -24,12 +26,13 @@ type FormValues = z.infer<typeof schema>;
 
 
 export function SaasLoginPage() {
+  useSaasNoindex();
   const hydrated = useSaasAuthHydrated();
   const token = useSaasAuthStore((s) => s.accessToken);
   const setSession = useSaasAuthStore((s) => s.setSession);
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from ?? '/saas/dashboard';
+  const from = (location.state as { from?: string } | null)?.from ?? saasPath('/dashboard');
 
   const {
     register,
@@ -45,7 +48,9 @@ export function SaasLoginPage() {
     onSuccess: (data) => {
       setSession(data.accessToken, data.admin);
       toast.success(`Welcome, ${data.admin.name}`);
-      navigate(from.startsWith('/saas') ? from : '/saas/dashboard', { replace: true });
+      navigate(from.startsWith(SAAS_ADMIN_BASE_PATH) ? from : saasPath('/dashboard'), {
+        replace: true,
+      });
     },
     onError: (err) => toast.error(getSaasApiErrorMessage(err, 'Unable to sign in')),
   });
@@ -59,7 +64,7 @@ export function SaasLoginPage() {
   }
 
   if (token && isSaasAccessToken(token)) {
-    return <Navigate to="/saas/dashboard" replace />;
+    return <Navigate to={saasPath('/dashboard')} replace />;
   }
 
   return (

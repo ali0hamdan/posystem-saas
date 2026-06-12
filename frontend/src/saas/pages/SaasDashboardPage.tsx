@@ -13,6 +13,7 @@ import { SaasCard } from '@/saas/components/SaasCard';
 import { SaasStatusBadge } from '@/saas/components/SaasStatusBadge';
 import { getSaasApiErrorMessage } from '@/saas/api/saas-client';
 import { formatSaasDate } from '@/saas/lib/format-date';
+import { saasPath } from '@/saas/config/saas-paths';
 
 export function SaasDashboardPage() {
   const clientsQ = useQuery({
@@ -77,7 +78,7 @@ export function SaasDashboardPage() {
           <StatCard title="Total clients" value={String(stats.totalClients)} icon={Building2} />
           <StatCard title="Active clients" value={String(stats.activeClients)} icon={Users} />
           <StatCard title="Suspended" value={String(stats.suspendedClients)} icon={AlertTriangle} />
-          <Link to="/saas/clients/pending" className="block">
+          <Link to={saasPath('/clients/pending')} className="block">
             <StatCard title="Pending payment" value={String(stats.pendingPayment)} icon={Clock} />
           </Link>
           <StatCard title="Expired subs" value={String(stats.expiredSubscriptions)} icon={Clock} />
@@ -89,7 +90,7 @@ export function SaasDashboardPage() {
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <SaasCard title="Recent clients" action={<Link to="/saas/clients" className="text-xs text-primary-400 hover:underline">View all</Link>}>
+        <SaasCard title="Recent clients" action={<Link to={saasPath('/clients')} className="text-xs text-primary-400 hover:underline">View all</Link>}>
           {clientsQ.isLoading ? <SaasTableSkeleton rows={4} /> : (
             <DataTableShell minWidthClass="min-w-[480px]">
               <DataTable>
@@ -104,7 +105,7 @@ export function SaasDashboardPage() {
                   {recentClients.map((c) => (
                     <tr key={c.id} className="hover:bg-canvas">
                       <Td>
-                        <Link to={`/saas/clients/${c.id}`} className="font-medium text-primary-400 hover:underline">
+                        <Link to={saasPath(`/clients/${c.id}`)} className="font-medium text-primary-400 hover:underline">
                           {c.businessName}
                         </Link>
                       </Td>
@@ -120,7 +121,7 @@ export function SaasDashboardPage() {
           )}
         </SaasCard>
 
-        <SaasCard title="Expiring subscriptions" action={<Link to="/saas/clients/expiring" className="text-xs text-primary-400 hover:underline">View all</Link>}>
+        <SaasCard title="Expiring subscriptions" action={<Link to={saasPath('/clients/expiring')} className="text-xs text-primary-400 hover:underline">View all</Link>}>
           {subsQ.isLoading ? <SaasTableSkeleton rows={4} /> : expiring.length === 0 ? (
             <p className="text-sm text-ink-muted">No subscriptions expiring in the next 30 days.</p>
           ) : (
@@ -137,7 +138,7 @@ export function SaasDashboardPage() {
                   {expiring.map((s) => (
                     <tr key={s.id}>
                       <Td>
-                        <Link to={`/saas/clients/${s.clientId}/subscription`} className="text-primary-400 hover:underline">
+                        <Link to={saasPath(`/clients/${s.clientId}/subscription`)} className="text-primary-400 hover:underline">
                           {s.client.businessName}
                         </Link>
                       </Td>
@@ -189,7 +190,7 @@ export function SaasDashboardPage() {
           {/* TODO: GET /saas/audit-logs not implemented on backend */}
           Audit log API is not available yet. Events are recorded server-side; a read API will be added in a future release.
         </p>
-        <Link to="/saas/audit-logs" className="mt-3 inline-block text-sm text-primary-400 hover:underline">
+        <Link to={saasPath('/audit-logs')} className="mt-3 inline-block text-sm text-primary-400 hover:underline">
           Go to audit logs →
         </Link>
       </SaasCard>

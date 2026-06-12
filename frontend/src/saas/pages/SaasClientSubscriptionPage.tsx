@@ -66,6 +66,7 @@ export function SaasClientSubscriptionPage() {
 
   const sub = subQ.data?.subscription;
   const usage = subQ.data?.usage;
+  const isLifetime = sub?.status === 'LIFETIME';
 
   if (subQ.isLoading) return <p className="text-sm text-ink-muted">Loading subscription…</p>;
   if (subQ.isError) return <p className="text-sm text-danger-600">{getSaasApiErrorMessage(subQ.error)}</p>;
@@ -78,8 +79,14 @@ export function SaasClientSubscriptionPage() {
             <Item label="Plan" value={`${sub.plan.name} (${sub.plan.code})`} />
             <Item label="Status" value={<SaasStatusBadge status={sub.status} />} />
             <Item label="Starts" value={formatSaasDate(sub.startsAt)} />
-            <Item label="Expires" value={formatSaasDate(sub.expiresAt)} />
-            <Item label="Days remaining" value={String(daysUntil(sub.expiresAt))} />
+            <Item
+              label="Expires"
+              value={isLifetime ? 'Never (lifetime)' : formatSaasDate(sub.expiresAt)}
+            />
+            <Item
+              label="Days remaining"
+              value={isLifetime ? '∞' : String(daysUntil(sub.expiresAt))}
+            />
             <Item label="Grace days" value={String(sub.graceDays)} />
             <Item label="Max users" value={sub.maxUsers ?? 'Unlimited'} />
             <Item label="Max branches" value={sub.maxBranches ?? 'Unlimited'} />
@@ -101,13 +108,31 @@ export function SaasClientSubscriptionPage() {
       ) : null}
 
       {perms.canManageBilling ? (
-        <div className="flex gap-2">
-          <Button variant="primary" size="sm" onClick={() => setRenewOpen(true)}>
-            Renew subscription
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => setPlanOpen(true)}>
-            Change plan
-          </Button>
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            {isLifetime ? (
+              <Button
+                variant="primary"
+                size="sm"
+                disabled
+                title="Lifetime subscriptions do not need renewal."
+              >
+                Renew subscription
+              </Button>
+            ) : (
+              <Button variant="primary" size="sm" onClick={() => setRenewOpen(true)}>
+                Renew subscription
+              </Button>
+            )}
+            <Button variant="secondary" size="sm" onClick={() => setPlanOpen(true)}>
+              Change plan
+            </Button>
+          </div>
+          {isLifetime ? (
+            <p className="text-xs text-ink-muted">
+              Lifetime subscriptions do not need renewal.
+            </p>
+          ) : null}
         </div>
       ) : (
         <p className="text-xs text-ink-faint">Billing actions require SUPER_ADMIN or BILLING role.</p>

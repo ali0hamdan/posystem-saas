@@ -256,14 +256,15 @@ function Hero() {
 
   return (
     <section className="relative overflow-hidden pt-28 sm:pt-36">
-      {/* Layer 1 — base wash. A long vertical gradient that quietly tints the
-          canvas indigo before any of the accent orbs land on top. */}
+      {/* Layer 1 — base wash. A warm vertical gradient that quietly tints
+          the canvas toward orange before any of the accent orbs land on
+          top. */}
       <div
         aria-hidden
         className={`pointer-events-none absolute inset-0 ${
           dark
-            ? 'bg-[linear-gradient(180deg,rgba(99,102,241,0.06)_0%,rgba(15,23,42,0)_60%,rgba(15,23,42,0)_100%)]'
-            : 'bg-[linear-gradient(180deg,rgba(238,242,255,0.9)_0%,rgba(248,250,255,0.6)_55%,rgba(255,255,255,0)_100%)]'
+            ? 'bg-[linear-gradient(180deg,rgba(249,115,22,0.06)_0%,rgba(15,15,17,0)_60%,rgba(15,15,17,0)_100%)]'
+            : 'bg-[linear-gradient(180deg,rgba(255,247,237,0.9)_0%,rgba(255,250,245,0.6)_55%,rgba(255,255,255,0)_100%)]'
         }`}
       />
 
@@ -284,48 +285,48 @@ function Hero() {
         }}
       />
 
-      {/* Layer 3a — violet orb, top-left. Sits behind the headline; gives the
-          eyebrow pill its glow. */}
+      {/* Layer 3a — amber orb, top-left. Sits behind the headline; gives
+          the eyebrow pill its glow. */}
       <div
         aria-hidden
         className={`pointer-events-none absolute -left-24 -top-32 h-[28rem] w-[28rem] rounded-full blur-3xl ${
           dark
-            ? 'bg-[radial-gradient(circle,rgba(139,92,246,0.22),transparent_70%)]'
-            : 'bg-[radial-gradient(circle,rgba(139,92,246,0.32),transparent_70%)]'
+            ? 'bg-[radial-gradient(circle,rgba(245,158,11,0.20),transparent_70%)]'
+            : 'bg-[radial-gradient(circle,rgba(245,158,11,0.26),transparent_70%)]'
         }`}
       />
 
-      {/* Layer 3b — sky-blue orb, top-right. Balances the violet on the
+      {/* Layer 3b — soft peach orb, top-right. Balances the amber on the
           opposite side; both bleed in from beyond the viewport. */}
       <div
         aria-hidden
         className={`pointer-events-none absolute -right-32 -top-20 h-[26rem] w-[26rem] rounded-full blur-3xl ${
           dark
-            ? 'bg-[radial-gradient(circle,rgba(56,189,248,0.18),transparent_70%)]'
-            : 'bg-[radial-gradient(circle,rgba(96,165,250,0.26),transparent_70%)]'
+            ? 'bg-[radial-gradient(circle,rgba(251,146,60,0.18),transparent_70%)]'
+            : 'bg-[radial-gradient(circle,rgba(253,186,116,0.30),transparent_70%)]'
         }`}
       />
 
-      {/* Layer 3c — indigo halo, centered behind the headline. Replaces the
-          original single radial gradient with a softer, larger ellipse so the
-          headline reads on a calm pool of color. */}
+      {/* Layer 3c — orange halo, centered behind the headline. A softer,
+          larger ellipse so the headline reads on a calm pool of warm
+          color. */}
       <div
         aria-hidden
         className={`pointer-events-none absolute left-1/2 top-24 h-[34rem] w-[46rem] -translate-x-1/2 rounded-full blur-3xl ${
           dark
-            ? 'bg-[radial-gradient(ellipse,rgba(99,102,241,0.20),transparent_70%)]'
-            : 'bg-[radial-gradient(ellipse,rgba(99,102,241,0.22),transparent_70%)]'
+            ? 'bg-[radial-gradient(ellipse,rgba(249,115,22,0.18),transparent_70%)]'
+            : 'bg-[radial-gradient(ellipse,rgba(249,115,22,0.20),transparent_70%)]'
         }`}
       />
 
-      {/* Layer 4 — bottom blend. Fades the layered backdrop into bg-canvas so
-          the next section (OnboardingSteps) joins seamlessly. */}
+      {/* Layer 4 — bottom blend. Fades the layered backdrop into bg-canvas
+          so the next section (OnboardingSteps) joins seamlessly. */}
       <div
         aria-hidden
         className={`pointer-events-none absolute inset-x-0 bottom-0 h-40 ${
           dark
-            ? 'bg-[linear-gradient(180deg,transparent_0%,var(--color-canvas,#0a0a14)_100%)]'
-            : 'bg-[linear-gradient(180deg,transparent_0%,var(--color-canvas,#ffffff)_100%)]'
+            ? 'bg-[linear-gradient(180deg,transparent_0%,var(--color-canvas,#0f0f11)_100%)]'
+            : 'bg-[linear-gradient(180deg,transparent_0%,var(--color-canvas,#fffaf5)_100%)]'
         }`}
       />
 
@@ -1065,7 +1066,7 @@ function FinalCTA() {
         <div
           className={`relative overflow-hidden rounded-3xl border px-8 py-16 text-center sm:px-16 ${dark ? 'border-white/10 bg-white/[0.04]' : 'border-line bg-white/85'}`}
         >
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_120%_at_50%_0%,rgba(99,102,241,0.12),transparent)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_120%_at_50%_0%,rgba(249,115,22,0.14),transparent)]" />
           <div className="relative">
             <h2 className={`text-3xl font-semibold tracking-tight sm:text-4xl ${dark ? 'text-white' : 'text-ink'}`}>
               Start managing your business with Nezhin POS

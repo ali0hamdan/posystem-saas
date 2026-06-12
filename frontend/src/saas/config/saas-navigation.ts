@@ -12,6 +12,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { SaasAdminRole } from '@/saas/types';
+import { saasPath } from '@/saas/config/saas-paths';
 
 export type SaasNavItem = {
   to: string;
@@ -31,39 +32,39 @@ export const saasNavSections: SaasNavSection[] = [
   {
     id: 'overview',
     label: 'Overview',
-    items: [{ to: '/saas/dashboard', label: 'Dashboard', icon: LayoutDashboard }],
+    items: [{ to: saasPath('/dashboard'), label: 'Dashboard', icon: LayoutDashboard }],
   },
   {
     id: 'clients',
     label: 'Clients',
     items: [
-      { to: '/saas/clients', label: 'All clients', icon: Building2, end: true },
-      { to: '/saas/clients/pending', label: 'Pending payment', icon: Clock },
-      { to: '/saas/clients/expiring', label: 'Expiring soon', icon: ShieldAlert },
-      { to: '/saas/clients/suspended', label: 'Suspended', icon: Users },
+      { to: saasPath('/clients'), label: 'All clients', icon: Building2, end: true },
+      { to: saasPath('/clients/pending'), label: 'Pending payment', icon: Clock },
+      { to: saasPath('/clients/expiring'), label: 'Expiring soon', icon: ShieldAlert },
+      { to: saasPath('/clients/suspended'), label: 'Suspended', icon: Users },
     ],
   },
   {
     id: 'licensing',
     label: 'Licensing',
     items: [
-      { to: '/saas/plans', label: 'Plans', icon: CreditCard, roles: ['SUPER_ADMIN', 'SUPPORT', 'BILLING'] },
-      { to: '/saas/subscriptions', label: 'Subscriptions', icon: ClipboardList },
-      { to: '/saas/activation-codes', label: 'Activation codes', icon: KeyRound },
+      { to: saasPath('/plans'), label: 'Plans', icon: CreditCard, roles: ['SUPER_ADMIN', 'SUPPORT', 'BILLING'] },
+      { to: saasPath('/subscriptions'), label: 'Subscriptions', icon: ClipboardList },
+      { to: saasPath('/activation-codes'), label: 'Activation codes', icon: KeyRound },
     ],
   },
   {
     id: 'operations',
     label: 'Operations',
     items: [
-      { to: '/saas/devices', label: 'Devices', icon: Monitor },
-      { to: '/saas/audit-logs', label: 'Audit logs', icon: ClipboardList },
+      { to: saasPath('/devices'), label: 'Devices', icon: Monitor },
+      { to: saasPath('/audit-logs'), label: 'Audit logs', icon: ClipboardList },
     ],
   },
   {
     id: 'settings',
     label: 'Settings',
-    items: [{ to: '/saas/settings', label: 'Platform settings', icon: Settings, roles: ['SUPER_ADMIN'] }],
+    items: [{ to: saasPath('/settings'), label: 'Platform settings', icon: Settings, roles: ['SUPER_ADMIN'] }],
   },
 ];
 
@@ -83,9 +84,9 @@ export function visibleSaasNavSections(role: SaasAdminRole | undefined): SaasNav
 }
 
 export const clientSubNav = (clientId: string): SaasNavItem[] => [
-  { to: `/saas/clients/${clientId}`, label: 'Overview', icon: LayoutDashboard, end: true },
-  { to: `/saas/clients/${clientId}/subscription`, label: 'Subscription', icon: CreditCard },
-  { to: `/saas/clients/${clientId}/users`, label: 'Users', icon: Users },
-  { to: `/saas/clients/${clientId}/devices`, label: 'Devices', icon: Monitor },
-  { to: `/saas/clients/${clientId}/activation-codes`, label: 'Activation codes', icon: KeyRound },
+  { to: saasPath(`/clients/${clientId}`), label: 'Overview', icon: LayoutDashboard, end: true },
+  { to: saasPath(`/clients/${clientId}/subscription`), label: 'Subscription', icon: CreditCard },
+  { to: saasPath(`/clients/${clientId}/users`), label: 'Users', icon: Users },
+  { to: saasPath(`/clients/${clientId}/devices`), label: 'Devices', icon: Monitor },
+  { to: saasPath(`/clients/${clientId}/activation-codes`), label: 'Activation codes', icon: KeyRound },
 ];

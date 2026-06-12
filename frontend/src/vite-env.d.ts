@@ -8,6 +8,10 @@ interface ImportMetaEnv {
   readonly VITE_BYPASS_LICENSE?: string;
   /** Optional: browser Sentry DSN (never commit production secrets). */
   readonly VITE_SENTRY_DSN?: string;
+  /** Configurable SaaS Super Admin URL prefix (e.g. `/nz-control-8f3k`). Defaults to `/saas`. */
+  readonly VITE_SUPER_ADMIN_BASE_PATH?: string;
+  /** Configurable SaaS Super Admin API prefix (e.g. `/saas-admin-api-8f3k`). Defaults to `/saas`. */
+  readonly VITE_SUPER_ADMIN_API_PREFIX?: string;
 }
 
 declare const __STOCK_POS_VERSION__: string;

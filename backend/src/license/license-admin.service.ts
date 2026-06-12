@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'crypto';
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { ActivationCodeStatus } from '@prisma/client';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { ActivationCodeStatus, SubscriptionStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import { CreateActivationCodeDto } from './dto/create-activation-code.dto';
@@ -89,7 +89,22 @@ export class LicenseAdminService {
   async renewSubscription(id: string, dto: RenewLicenseDto, saasAdminId: string) {
     const sub = await this.prisma.subscription.findUnique({ where: { id } });
     if (!sub) throw new NotFoundException({ message: 'Subscription not found', code: 'SUBSCRIPTION_NOT_FOUND' });
-    const nextExpires = new Date((sub.expiresAt?.getTime() ?? Date.now()) + dto.extendDays * 86_400_000);
+
+    // Desktop Lifetime customers paid a one-time fee — there is no period to
+    // renew. Refuse here so a SaaS admin cannot accidentally downgrade a
+    // LIFETIME row to ACTIVE-with-expiry.
+    if (sub.status === SubscriptionStatus.LIFETIME) {
+      throw new BadRequestException({
+        message: 'Lifetime subscriptions do not need renewal.',
+        code: 'SUBSCRIPTION_LIFETIME_NOT_RENEWABLE',
+      });
+    }
+
+    // Renew forward from whichever is later: the current expiry or "now".
+    // For a subscription that already expired, this restarts the clock today.
+    const base = Math.max(sub.expiresAt?.getTime() ?? Date.now(), Date.now());
+    const nextExpires = new Date(base + dto.extendDays * 86_400_000);
+    const periodStart = new Date();
 
     let planId = sub.planId;
     if (dto.plan !== undefined) {
@@ -102,6 +117,8 @@ export class LicenseAdminService {
       where: { id },
       data: {
         expiresAt: nextExpires,
+        currentPeriodStart: periodStart,
+        currentPeriodEnd: nextExpires,
         planId,
         ...(dto.status !== undefined ? { status: dto.status } : {}),
       },

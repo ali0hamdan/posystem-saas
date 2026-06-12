@@ -31,6 +31,19 @@ import type { VerifyEmailOtpDto } from './dto/verify-email-otp.dto';
 
 const BCRYPT_ROUNDS = 12;
 
+/**
+ * Payment simulation must be turned on by an explicit env flag, never
+ * inferred from NODE_ENV. Staging is not 'production' but staging must
+ * still NOT accept unauthenticated simulate-success calls — so the
+ * prior `NODE_ENV !== 'production'` gate was unsafe.
+ *
+ * Accepts the usual truthy variants so devs can write `=1` / `=yes`.
+ */
+function isPaymentSimulationEnabled(): boolean {
+  const raw = (process.env.ENABLE_PAYMENT_SIMULATION ?? '').trim().toLowerCase();
+  return raw === 'true' || raw === '1' || raw === 'yes';
+}
+
 function sha256Hex(s: string): string {
   return createHash('sha256').update(s, 'utf8').digest('hex');
 }
@@ -453,10 +466,11 @@ export class PublicService {
   }
 
   async simulatePaymentSuccess(paymentId: string) {
-    if (process.env.NODE_ENV === 'production') {
+    if (!isPaymentSimulationEnabled()) {
       throw new BadRequestException({
-        message: 'Payment simulation is not available in production',
-        code: 'SIM_PRODUCTION_DISABLED',
+        message:
+          'Payment simulation is disabled on this deployment. Set ENABLE_PAYMENT_SIMULATION=true to enable in development.',
+        code: 'PAYMENT_SIMULATION_DISABLED',
       });
     }
 

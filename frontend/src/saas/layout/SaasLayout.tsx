@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { SaasSidebar } from '@/saas/layout/SaasSidebar';
 import { SaasTopbar } from '@/saas/layout/SaasTopbar';
+import { useSaasNoindex } from '@/saas/hooks/use-saas-noindex';
 
 const COLLAPSE_KEY = 'saas-sidebar-collapsed';
 
 export function SaasLayout() {
+  useSaasNoindex();
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem(COLLAPSE_KEY) === '1';

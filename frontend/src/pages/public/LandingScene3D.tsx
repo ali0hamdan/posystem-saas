@@ -99,33 +99,34 @@ function CashRegister({ dark, reduce }: { dark: boolean; reduce: boolean }) {
   const coin = useRef<THREE.Group>(null);
   const { current, target } = useScrollProgress();
 
-  // Palette tuned to the landing background (indigo orbs, off-white base).
+  // Palette tuned to the new orange/warm landing background. Dark mode uses
+  // deep zinc/burnt-orange tones; light mode uses soft warm cream + orange.
   const palette = useMemo(
     () =>
       dark
         ? {
-            body: '#1e1b4b',           // deep indigo
-            bodyAccent: '#312e81',
-            top: '#4338ca',            // display housing
-            display: '#22d3ee',        // cyan screen
-            keypad: '#0f0a2e',
-            keyTop: '#a78bfa',
-            drawer: '#3730a3',
-            metal: '#cbd5e1',          // chrome trim
-            coin: '#fbbf24',
-            shadow: '#0f0a2e',
+            body: '#27272a',           // zinc-800 — neutral cool body
+            bodyAccent: '#3f3f46',
+            top: '#9a3412',            // burnt orange (primary-800)
+            display: '#fb923c',        // primary-400 — warm screen glow
+            keypad: '#18181b',
+            keyTop: '#fdba74',         // primary-300 keys
+            drawer: '#c2410c',         // primary-700 drawer
+            metal: '#d4d4d8',          // chrome trim
+            coin: '#fbbf24',           // amber-400 coin (kept)
+            shadow: '#0a0a0b',
           }
         : {
-            body: '#eef2ff',           // soft indigo-50
-            bodyAccent: '#c7d2fe',
-            top: '#a5b4fc',
-            display: '#4338ca',
-            keypad: '#e0e7ff',
-            keyTop: '#6366f1',
-            drawer: '#c7d2fe',
-            metal: '#94a3b8',
-            coin: '#facc15',
-            shadow: '#a5b4fc',
+            body: '#fff7ed',           // primary-50 (warm cream)
+            bodyAccent: '#fed7aa',     // primary-200
+            top: '#fdba74',            // primary-300
+            display: '#c2410c',        // primary-700 — readable on cream
+            keypad: '#ffedd5',         // primary-100
+            keyTop: '#f97316',         // primary-500 keys
+            drawer: '#fed7aa',         // primary-200 drawer
+            metal: '#a8a29e',          // warm stone trim
+            coin: '#f59e0b',           // amber-500 coin
+            shadow: '#fdba74',
           },
     [dark],
   );

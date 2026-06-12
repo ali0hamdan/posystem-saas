@@ -7,6 +7,7 @@ import { SaasQueryError, SaasTableSkeleton } from '@/saas/components/SaasQuerySt
 import { SaasStatusBadge } from '@/saas/components/SaasStatusBadge';
 import { getSaasApiErrorMessage } from '@/saas/api/saas-client';
 import { PageHeader } from '@/components/ui/page-header';
+import { saasPath } from '@/saas/config/saas-paths';
 
 export function SaasClientLayout() {
   const { id = '' } = useParams<{ id: string }>();
@@ -25,7 +26,7 @@ export function SaasClientLayout() {
         title={client?.businessName ?? 'Client'}
         description={client ? `${client.ownerName} · ${client.email}` : undefined}
         breadcrumbs={[
-          { label: 'Clients', to: '/saas/clients' },
+          { label: 'Clients', to: saasPath('/clients') },
           { label: client?.businessName ?? '…' },
         ]}
         actions={client ? <SaasStatusBadge status={client.status} /> : null}

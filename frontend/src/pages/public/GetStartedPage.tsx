@@ -553,16 +553,16 @@ export function GetStartedPage() {
                   transition={{ duration: 0.4, delay: subscriptionPlans.length * 0.07, ease }}
                   className={`relative flex flex-col rounded-2xl border-2 p-5 transition-shadow bg-surface ${
                     preselectedPlanCode === lifetimePlan.code
-                      ? 'border-indigo-500 shadow-lg shadow-indigo-500/20'
-                      : 'border-indigo-400/70 hover:border-indigo-500 hover:shadow-md'
+                      ? 'border-amber-500 shadow-lg shadow-amber-500/20'
+                      : 'border-amber-400/70 hover:border-amber-500 hover:shadow-md'
                   }`}
                 >
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-indigo-600 px-3 py-0.5 text-[11px] font-bold text-white whitespace-nowrap">
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-amber-600 px-3 py-0.5 text-[11px] font-bold text-white whitespace-nowrap">
                     One-time payment
                   </span>
                   <div className="mb-3">
                     <p className="font-bold text-base text-ink flex items-center gap-1.5">
-                      <Monitor className="h-4 w-4 text-indigo-500" />
+                      <Monitor className="h-4 w-4 text-amber-500" />
                       Desktop Lifetime
                     </p>
                     <p className="text-xs text-ink-muted mt-0.5">
@@ -574,9 +574,9 @@ export function GetStartedPage() {
                     <span className="text-sm text-ink-muted ml-1">once</span>
                   </div>
                   <ul className="mb-3 flex-1 space-y-2 text-xs text-ink-muted">
-                    <li className="flex items-center gap-2"><Users className="h-3.5 w-3.5 text-indigo-400 shrink-0" />Unlimited users</li>
-                    <li className="flex items-center gap-2"><GitBranch className="h-3.5 w-3.5 text-indigo-400 shrink-0" />Unlimited branches</li>
-                    <li className="flex items-center gap-2"><Monitor className="h-3.5 w-3.5 text-indigo-400 shrink-0" />Unlimited devices</li>
+                    <li className="flex items-center gap-2"><Users className="h-3.5 w-3.5 text-amber-400 shrink-0" />Unlimited users</li>
+                    <li className="flex items-center gap-2"><GitBranch className="h-3.5 w-3.5 text-amber-400 shrink-0" />Unlimited branches</li>
+                    <li className="flex items-center gap-2"><Monitor className="h-3.5 w-3.5 text-amber-400 shrink-0" />Unlimited devices</li>
                     <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-success-500 shrink-0" />Desktop app download & activation license</li>
                     <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-success-500 shrink-0" />No monthly subscription</li>
                   </ul>
@@ -587,7 +587,7 @@ export function GetStartedPage() {
                   <button
                     onClick={() => handleSelectPlan(lifetimePlan)}
                     disabled={!!submitting}
-                    className="w-full flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-bold transition-all disabled:opacity-50 bg-indigo-600 hover:bg-indigo-700 text-white"
+                    className="w-full flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-bold transition-all disabled:opacity-50 bg-amber-600 hover:bg-amber-700 text-white"
                   >
                     {submitting === lifetimePlan.code ? <Loader2 className="h-4 w-4 animate-spin" /> : <><span>Buy Desktop App</span><ChevronRight className="h-4 w-4" /></>}
                   </button>

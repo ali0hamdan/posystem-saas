@@ -26,18 +26,22 @@ export default {
           bg:     'rgb(var(--sidebar-bg) / <alpha-value>)',
           border: 'rgb(var(--sidebar-border) / <alpha-value>)',
         },
+        // Brand: Tailwind `orange` palette. Every existing `bg-primary-*`,
+        // `text-primary-*`, `border-primary-*`, `ring-primary-*` class in the
+        // app keeps working — only the resolved color changes. Use the dark
+        // mode picks from this palette via `dark:bg-primary-400` etc.
         primary: {
-          50:  '#eef2ff',
-          100: '#e0e7ff',
-          200: '#c7d2fe',
-          300: '#a5b4fc',
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
-          950: '#1e1b4b',
+          50:  '#fff7ed',
+          100: '#ffedd5',
+          200: '#fed7aa',
+          300: '#fdba74',
+          400: '#fb923c',
+          500: '#f97316',
+          600: '#ea580c',
+          700: '#c2410c',
+          800: '#9a3412',
+          900: '#7c2d12',
+          950: '#431407',
         },
         danger: {
           50:  '#fff1f2',
@@ -73,7 +77,7 @@ export default {
         card:  '0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 6px -1px rgb(0 0 0 / 0.04)',
         soft:  '0 4px 12px -2px rgb(0 0 0 / 0.08)',
         panel: '0 0 0 1px rgb(0 0 0 / 0.04), 0 8px 24px -4px rgb(0 0 0 / 0.08)',
-        glow:  '0 0 0 3px rgb(99 102 241 / 0.2)',
+        glow:  '0 0 0 3px rgb(249 115 22 / 0.25)',
       },
       borderRadius: {
         '4xl': '2rem',

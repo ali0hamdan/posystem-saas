@@ -17,6 +17,8 @@ import { SaasSubscriptionsPage } from '@/saas/pages/SaasSubscriptionsPage';
 import { SaasActivationCodesPage } from '@/saas/pages/SaasActivationCodesPage';
 import { SaasAuditLogsPage } from '@/saas/pages/SaasAuditLogsPage';
 import { SaasSettingsPage } from '@/saas/pages/SaasSettingsPage';
+import { LegacySaasNotFound } from '@/saas/components/LegacySaasNotFound';
+import { HAS_CUSTOM_ADMIN_PATH, SAAS_ADMIN_BASE_PATH, saasPath } from '@/saas/config/saas-paths';
 
 function SaasProtectedShell() {
   return (
@@ -28,16 +30,24 @@ function SaasProtectedShell() {
   );
 }
 
+/**
+ * Build the SaaS route tree under the configured base path.
+ *
+ * When `VITE_SUPER_ADMIN_BASE_PATH` is set to a non-default value, the
+ * well-known `/saas/*` route is registered separately as a 404 page so the
+ * old, guessable path stops working. We deliberately do NOT redirect from
+ * `/saas/*` to the new path — that would leak the new path's location.
+ */
 export const saasRoutes = [
-  { path: '/saas/login', element: <SaasLoginPage /> },
+  { path: saasPath('/login'), element: <SaasLoginPage /> },
   {
     element: <SaasProtectedShell />,
     children: [
       {
-        path: '/saas',
+        path: SAAS_ADMIN_BASE_PATH,
         element: <SaasLayout />,
         children: [
-          { index: true, element: <Navigate to="/saas/dashboard" replace /> },
+          { index: true, element: <Navigate to={saasPath('/dashboard')} replace /> },
           { path: 'dashboard', element: <SaasDashboardPage /> },
           { path: 'clients', element: <SaasClientsListPage /> },
           { path: 'clients/expiring', element: <SaasClientsListPage mode="expiring" /> },
@@ -64,4 +74,13 @@ export const saasRoutes = [
       },
     ],
   },
+  // Legacy 404 catchers — only attached when a custom path is configured.
+  // (When the default `/saas` is still in use, the main tree above already
+  // serves the same paths and we don't want to shadow them with 404s.)
+  ...(HAS_CUSTOM_ADMIN_PATH
+    ? [
+        { path: '/saas', element: <LegacySaasNotFound /> },
+        { path: '/saas/*', element: <LegacySaasNotFound /> },
+      ]
+    : []),
 ];
