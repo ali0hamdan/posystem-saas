@@ -238,6 +238,13 @@ enum CouponType {
 }
 
 /// Tenant business vertical — controls which POS surfaces (retail vs F&B) are shown.
+///
+/// HYBRID is DISCONTINUED. New tenants cannot be created as HYBRID — every
+/// public-registration and SaaS-admin create/edit DTO refuses it (see
+/// `common/validators/not-hybrid.validator.ts`). The enum value is kept here
+/// so existing legacy HYBRID tenants still validate at the DB layer; their
+/// dashboards continue to render via the read-path branches in navigation,
+/// business-routing, scope services, and permissions.
 enum BusinessType {
   RETAIL
   FOOD_BEVERAGE

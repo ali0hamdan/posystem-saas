@@ -31,7 +31,14 @@ export interface PublicPlan {
   sortOrder?: number;
 }
 
-export type OnboardingBusinessType = 'RETAIL' | 'FOOD_BEVERAGE' | 'WHOLESALE' | 'HYBRID';
+/**
+ * Business types a new customer can pick during onboarding. `HYBRID` was
+ * discontinued and is intentionally NOT in this union — new tenants cannot
+ * be created as Hybrid. Legacy Hybrid tenants still exist in the database
+ * and are typed via the broader `BusinessType` (kept in `types/tenant-context.ts`
+ * and `saas/types`) for read paths.
+ */
+export type OnboardingBusinessType = 'RETAIL' | 'FOOD_BEVERAGE' | 'WHOLESALE';
 
 export interface RegisterPayload {
   businessName: string;

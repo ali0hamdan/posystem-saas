@@ -428,7 +428,7 @@ function BusinessTypes() {
           Choose the system that matches how you sell
         </h2>
         <p className={`mt-4 text-lg ${dark ? 'text-white/50' : 'text-ink-muted'}`}>
-          Nezhin POS is one platform. During registration you select Retail, Food & Beverage, Wholesale, or Hybrid — and
+          Nezhin POS is one platform. During registration you pick Retail, Food & Beverage, or Wholesale — and
           your dashboard adapts to that workflow.
         </p>
       </FadeIn>
@@ -1095,7 +1095,7 @@ function Footer() {
               <span className={`text-[15px] font-semibold ${dark ? 'text-white' : 'text-ink'}`}>Nezhin POS</span>
             </div>
             <p className={`mt-4 max-w-sm text-sm leading-relaxed ${dark ? 'text-white/35' : 'text-ink-faint'}`}>
-              One SaaS POS platform for Retail, Food & Beverage, Wholesale, and Hybrid businesses.
+              One SaaS POS platform for Retail, Food & Beverage, and Wholesale businesses.
             </p>
           </div>
           {cols.map((col) => (

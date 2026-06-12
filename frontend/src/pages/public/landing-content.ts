@@ -24,7 +24,7 @@ export const HERO_SUBHEADLINE =
 export const ONBOARDING_STEPS: { title: string; description: string }[] = [
   {
     title: 'Choose your system',
-    description: 'Retail, Food & Beverage, Wholesale, or Hybrid.',
+    description: 'Retail, Food & Beverage, or Wholesale.',
   },
   {
     title: 'Select your package',
@@ -57,7 +57,7 @@ export const HERO_STATS: { icon: LucideIcon; label: string }[] = [
 ];
 
 export type BusinessTypeCard = {
-  id: OnboardingBusinessType | 'HYBRID';
+  id: OnboardingBusinessType;
   title: string;
   description: string;
   features: string[];
@@ -115,20 +115,6 @@ export const BUSINESS_TYPE_CARDS: BusinessTypeCard[] = [
     ],
     icon: Warehouse,
     ctaType: 'WHOLESALE',
-  },
-  {
-    id: 'HYBRID',
-    title: 'Hybrid',
-    description: 'For businesses that need more than one workflow in the same account.',
-    features: [
-      'Retail + F&B + Wholesale modules',
-      'Shared inventory',
-      'Shared users',
-      'Shared customers',
-      'Unified reports',
-    ],
-    icon: Layers,
-    ctaType: 'HYBRID',
   },
 ];
 
@@ -224,7 +210,7 @@ export const WHY_CHOOSE: { icon: LucideIcon; title: string; desc: string }[] = [
   {
     icon: Layers,
     title: 'Built for different business types',
-    desc: 'One SaaS platform with Retail, F&B, Wholesale, and Hybrid workflows.',
+    desc: 'One SaaS platform with Retail, F&B, and Wholesale workflows.',
   },
   {
     icon: Package,
@@ -284,7 +270,7 @@ export const ROLE_GROUPS: { title: string; roles: string[] }[] = [
 export const FAQ_ITEMS: { q: string; a: string }[] = [
   {
     q: 'Can I choose the system type during registration?',
-    a: 'Yes. You can choose Retail, Food & Beverage, Wholesale, or Hybrid when you create your account.',
+    a: 'Yes. You can choose Retail, Food & Beverage, or Wholesale when you create your account.',
   },
   {
     q: 'Can I change my package later?',

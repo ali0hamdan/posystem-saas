@@ -2,19 +2,18 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Check, Loader2, Monitor, Users, GitBranch, Zap, Store,
-  UtensilsCrossed, Warehouse, Layers,
+  UtensilsCrossed, Warehouse,
 } from 'lucide-react';
 import { fetchPublicPlans, type PublicPlan } from '@/api/public.api';
 
 const POPULAR_CODE = 'BUSINESS';
 
-type PricingBusinessType = 'RETAIL' | 'FOOD_BEVERAGE' | 'WHOLESALE' | 'HYBRID';
+type PricingBusinessType = 'RETAIL' | 'FOOD_BEVERAGE' | 'WHOLESALE';
 
 const BUSINESS_TABS: { type: PricingBusinessType; label: string; icon: typeof Store }[] = [
   { type: 'RETAIL', label: 'Retail', icon: Store },
   { type: 'FOOD_BEVERAGE', label: 'Food & Beverage', icon: UtensilsCrossed },
   { type: 'WHOLESALE', label: 'Wholesale / B2B', icon: Warehouse },
-  { type: 'HYBRID', label: 'Hybrid', icon: Layers },
 ];
 
 function featureLabels(plan: PublicPlan): string[] {

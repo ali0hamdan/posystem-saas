@@ -11,6 +11,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { PatchSaasClientSubscriptionDto } from './patch-saas-client-subscription.dto';
+import { NotHybrid } from '../../common/validators/not-hybrid.validator';
 
 export class PatchSaasClientDto {
   @IsOptional()
@@ -46,6 +47,7 @@ export class PatchSaasClientDto {
 
   @IsOptional()
   @IsEnum(BusinessType)
+  @NotHybrid()
   businessType?: BusinessType;
 
   @IsOptional()

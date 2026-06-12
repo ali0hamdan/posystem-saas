@@ -83,17 +83,6 @@ const BUSINESS_OPTIONS: {
       { icon: Warehouse, label: 'Stock reservation' },
     ],
   },
-  {
-    type: 'HYBRID',
-    title: 'Hybrid',
-    description: 'Retail, F&B, and Wholesale workflows in one account with shared inventory and users.',
-    features: [
-      { icon: Store, label: 'Retail POS' },
-      { icon: UtensilsCrossed, label: 'F&B operations' },
-      { icon: Warehouse, label: 'Wholesale documents' },
-      { icon: Users, label: 'Shared users & customers' },
-    ],
-  },
 ];
 
 function LeftContent({
@@ -217,12 +206,17 @@ export function GetStartedPage() {
 
   useEffect(() => {
     const raw = searchParams.get('type')?.toUpperCase();
-    const valid: OnboardingBusinessType[] = ['RETAIL', 'FOOD_BEVERAGE', 'WHOLESALE', 'HYBRID'];
+    const valid: OnboardingBusinessType[] = ['RETAIL', 'FOOD_BEVERAGE', 'WHOLESALE'];
     if (raw && valid.includes(raw as OnboardingBusinessType)) {
       setBusinessType(raw as OnboardingBusinessType);
       setStep(2);
     }
-    // Hybrid Desktop Lifetime is discontinued — surface a clear message.
+    // Hybrid is no longer offered. Any legacy `?type=HYBRID` or
+    // `?plan=HYBRID_DESKTOP_LIFETIME` deep link is rejected here so the user
+    // sees a clean message instead of a silent fall-through.
+    if (raw === 'HYBRID') {
+      setApiError('Hybrid is no longer offered. Pick Retail, Food & Beverage, or Wholesale.');
+    }
     if (searchParams.get('plan')?.toUpperCase() === 'HYBRID_DESKTOP_LIFETIME') {
       setApiError('Hybrid Desktop Lifetime is not available.');
     }

@@ -7,6 +7,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { BillingCycle, BusinessType, LicensePlan } from '@prisma/client';
+import { NotHybrid } from '../../common/validators/not-hybrid.validator';
 
 export class RegisterClientDto {
   @IsString()
@@ -41,5 +42,6 @@ export class RegisterClientDto {
 
   @IsOptional()
   @IsEnum(BusinessType)
+  @NotHybrid()
   businessType?: BusinessType;
 }
