@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { fetchPublicPlans, type PublicPlan } from '@/api/public.api';
 import { useTheme } from '@/theme/use-theme';
+import { LandingScene3D } from '@/pages/public/LandingScene3D';
 import {
   BUSINESS_TYPE_CARDS,
   CORE_FEATURE_GROUPS,
@@ -1168,6 +1169,13 @@ function Footer() {
   );
 }
 
+function LandingScene3DSlot() {
+  // Mounted at the page root so the canvas is `position: fixed` and stays
+  // pinned across every scrolled section, parallaxing with scroll progress.
+  const dark = useDark();
+  return <LandingScene3D dark={dark} />;
+}
+
 export function LandingPage() {
   const reduce = useReducedMotion();
   const navigate = useNavigate();
@@ -1193,6 +1201,7 @@ export function LandingPage() {
         transition={{ duration: exiting ? 0.32 : 0.6, ease: [0.16, 1, 0.3, 1] }}
         className="relative min-h-screen overflow-x-hidden bg-canvas font-sans text-ink antialiased"
       >
+        <LandingScene3DSlot />
         <Navbar />
         <main className="relative">
           <Hero />
