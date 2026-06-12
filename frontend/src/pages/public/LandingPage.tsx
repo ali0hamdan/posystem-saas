@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import { fetchPublicPlans, type PublicPlan } from '@/api/public.api';
 import { useTheme } from '@/theme/use-theme';
-import { LandingScene3D } from '@/pages/public/LandingScene3D';
 import {
   BUSINESS_TYPE_CARDS,
   CORE_FEATURE_GROUPS,
@@ -256,74 +255,40 @@ function Hero() {
 
   return (
     <section className="relative overflow-hidden pt-28 sm:pt-36">
-      {/* Layer 1 — base wash. A warm vertical gradient that quietly tints
-          the canvas toward orange before any of the accent orbs land on
-          top. */}
+      {/* Single soft glow at the top — the only color accent in the hero.
+          Light mode: a warm sunrise hint from the top; dark mode: a quieter
+          ember. No orbs, no 3D, no blobs. Everything else is clean canvas. */}
       <div
         aria-hidden
-        className={`pointer-events-none absolute inset-0 ${
+        className={`pointer-events-none absolute inset-x-0 top-0 h-[44rem] ${
           dark
-            ? 'bg-[linear-gradient(180deg,rgba(249,115,22,0.06)_0%,rgba(15,15,17,0)_60%,rgba(15,15,17,0)_100%)]'
-            : 'bg-[linear-gradient(180deg,rgba(255,247,237,0.9)_0%,rgba(255,250,245,0.6)_55%,rgba(255,255,255,0)_100%)]'
+            ? 'bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,rgba(249,115,22,0.16),transparent_70%)]'
+            : 'bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,rgba(249,115,22,0.10),transparent_70%)]'
         }`}
       />
 
-      {/* Layer 2 — dot grid. Very low-opacity 24px lattice for the "premium
-          blueprint" feel. Pure CSS so no asset to ship. */}
+      {/* Whisper-thin dot grid. Masked tightly around the headline so it
+          reads as texture, not pattern. The only "creative" decoration. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
           backgroundImage: `radial-gradient(circle at 1px 1px, ${
-            dark ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.06)'
+            dark ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.05)'
           } 1px, transparent 0)`,
-          backgroundSize: '24px 24px',
+          backgroundSize: '28px 28px',
           maskImage:
-            'radial-gradient(ellipse 70% 55% at 50% 30%, black 60%, transparent 100%)',
+            'radial-gradient(ellipse 55% 45% at 50% 22%, black 50%, transparent 100%)',
           WebkitMaskImage:
-            'radial-gradient(ellipse 70% 55% at 50% 30%, black 60%, transparent 100%)',
+            'radial-gradient(ellipse 55% 45% at 50% 22%, black 50%, transparent 100%)',
         }}
       />
 
-      {/* Layer 3a — amber orb, top-left. Sits behind the headline; gives
-          the eyebrow pill its glow. */}
+      {/* Bottom blend. Fades into bg-canvas so the next section joins
+          seamlessly. */}
       <div
         aria-hidden
-        className={`pointer-events-none absolute -left-24 -top-32 h-[28rem] w-[28rem] rounded-full blur-3xl ${
-          dark
-            ? 'bg-[radial-gradient(circle,rgba(245,158,11,0.20),transparent_70%)]'
-            : 'bg-[radial-gradient(circle,rgba(245,158,11,0.26),transparent_70%)]'
-        }`}
-      />
-
-      {/* Layer 3b — soft peach orb, top-right. Balances the amber on the
-          opposite side; both bleed in from beyond the viewport. */}
-      <div
-        aria-hidden
-        className={`pointer-events-none absolute -right-32 -top-20 h-[26rem] w-[26rem] rounded-full blur-3xl ${
-          dark
-            ? 'bg-[radial-gradient(circle,rgba(251,146,60,0.18),transparent_70%)]'
-            : 'bg-[radial-gradient(circle,rgba(253,186,116,0.30),transparent_70%)]'
-        }`}
-      />
-
-      {/* Layer 3c — orange halo, centered behind the headline. A softer,
-          larger ellipse so the headline reads on a calm pool of warm
-          color. */}
-      <div
-        aria-hidden
-        className={`pointer-events-none absolute left-1/2 top-24 h-[34rem] w-[46rem] -translate-x-1/2 rounded-full blur-3xl ${
-          dark
-            ? 'bg-[radial-gradient(ellipse,rgba(249,115,22,0.18),transparent_70%)]'
-            : 'bg-[radial-gradient(ellipse,rgba(249,115,22,0.20),transparent_70%)]'
-        }`}
-      />
-
-      {/* Layer 4 — bottom blend. Fades the layered backdrop into bg-canvas
-          so the next section (OnboardingSteps) joins seamlessly. */}
-      <div
-        aria-hidden
-        className={`pointer-events-none absolute inset-x-0 bottom-0 h-40 ${
+        className={`pointer-events-none absolute inset-x-0 bottom-0 h-32 ${
           dark
             ? 'bg-[linear-gradient(180deg,transparent_0%,var(--color-canvas,#0f0f11)_100%)]'
             : 'bg-[linear-gradient(180deg,transparent_0%,var(--color-canvas,#fffaf5)_100%)]'
@@ -1170,13 +1135,6 @@ function Footer() {
   );
 }
 
-function LandingScene3DSlot() {
-  // Mounted at the page root so the canvas is `position: fixed` and stays
-  // pinned across every scrolled section, parallaxing with scroll progress.
-  const dark = useDark();
-  return <LandingScene3D dark={dark} />;
-}
-
 export function LandingPage() {
   const reduce = useReducedMotion();
   const navigate = useNavigate();
@@ -1202,7 +1160,6 @@ export function LandingPage() {
         transition={{ duration: exiting ? 0.32 : 0.6, ease: [0.16, 1, 0.3, 1] }}
         className="relative min-h-screen overflow-x-hidden bg-canvas font-sans text-ink antialiased"
       >
-        <LandingScene3DSlot />
         <Navbar />
         <main className="relative">
           <Hero />
