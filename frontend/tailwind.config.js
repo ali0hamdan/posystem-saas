@@ -26,26 +26,27 @@ export default {
           bg:     'rgb(var(--sidebar-bg) / <alpha-value>)',
           border: 'rgb(var(--sidebar-border) / <alpha-value>)',
         },
-        // Brand: vibrant pure yellow anchored at `#fefe22`.
+        // Brand: deep mustard yellow anchored at `#eed202`.
         //
         // The scale is built around the requested anchor color rather than
-        // Tailwind's default yellow. `primary-500` and `primary-600` BOTH
-        // resolve to `#fefe22` so the most-used CTA pattern
-        // (`bg-primary-600 text-white`) renders the exact requested color.
-        // The contrast-safety rule in `index.css` repaints `.text-white` to
-        // black on these backgrounds since white on #fefe22 fails AA.
+        // Tailwind's default yellow. `primary-400`, `primary-500`, and
+        // `primary-600` all resolve to `#eed202` so the most-used CTA
+        // pattern (`bg-primary-600 text-white`) renders the exact requested
+        // color. The contrast-safety rule in `index.css` repaints
+        // `.text-white` to black on these backgrounds since white on
+        // #eed202 fails AA contrast.
         primary: {
-          50:  '#ffffeb',
-          100: '#fffec4',
-          200: '#fffd8a',
-          300: '#fffd4d',
-          400: '#fefe22',  // anchor — same as 500/600 for accent harmony
-          500: '#fefe22',  // anchor — vibrant yellow used for accents & CTA
-          600: '#fefe22',  // anchor — CTA bg (black text auto-applied)
-          700: '#e3e300',  // hover — perceptibly darker, same hue
-          800: '#b8b800',
-          900: '#808000',
-          950: '#3d3d00',
+          50:  '#fffce6',
+          100: '#fdf4b9',
+          200: '#fceb78',
+          300: '#f7df3d',
+          400: '#eed202',  // anchor — used for accent text/icons on dark
+          500: '#eed202',  // anchor — accents & active states
+          600: '#eed202',  // anchor — CTA bg (black text auto-applied)
+          700: '#c9b002',  // hover — perceptibly darker, same hue
+          800: '#a08c02',
+          900: '#6e6001',
+          950: '#3d3500',
         },
         danger: {
           50:  '#fff1f2',
@@ -81,7 +82,7 @@ export default {
         card:  '0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 6px -1px rgb(0 0 0 / 0.04)',
         soft:  '0 4px 12px -2px rgb(0 0 0 / 0.08)',
         panel: '0 0 0 1px rgb(0 0 0 / 0.04), 0 8px 24px -4px rgb(0 0 0 / 0.08)',
-        glow:  '0 0 0 3px rgb(254 254 34 / 0.40)',
+        glow:  '0 0 0 3px rgb(238 210 2 / 0.40)',
       },
       borderRadius: {
         '4xl': '2rem',
