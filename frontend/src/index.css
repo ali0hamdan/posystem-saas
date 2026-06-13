@@ -6,38 +6,36 @@
 
 @layer base {
   :root {
-    /* Light mode — warm off-white canvas to complement the orange brand
-       without ever competing with text. Surfaces stay pure white so cards
-       still feel "lifted" against the canvas. Borders are slightly warmed
-       so they don't read as cool gray next to orange CTAs. */
-    --color-canvas: 255 250 245;        /* #fffaf5 — warm off-white */
-    --color-canvas-raised: 255 247 237; /* #fff7ed — orange-50 */
-    --color-surface: 255 255 255;
-    --color-surface-muted: 253 246 234; /* tinted toward warm */
-    --color-line: 231 222 211;          /* warm-tinted slate */
-    --color-line-strong: 168 154 139;
-    --color-ink: 15 23 42;
-    --color-ink-muted: 71 85 105;
-    --color-ink-faint: 148 163 184;
+    /* Light mode — pure white + neutral grays. Yellow shows up only on
+       CTAs / focus rings / accent borders, never as a flood color. This
+       keeps the page feeling premium, not childish. */
+    --color-canvas: 250 250 250;        /* #fafafa — near-white page */
+    --color-canvas-raised: 245 245 245; /* neutral-100 */
+    --color-surface: 255 255 255;       /* pure white cards */
+    --color-surface-muted: 250 250 250;
+    --color-line: 229 229 229;          /* neutral-200 */
+    --color-line-strong: 163 163 163;   /* neutral-400 */
+    --color-ink: 10 10 10;              /* #0a0a0a — strong black */
+    --color-ink-muted: 115 115 115;     /* neutral-500 */
+    --color-ink-faint: 163 163 163;     /* neutral-400 */
     --sidebar-bg: 255 255 255;
-    --sidebar-border: 231 222 211;
+    --sidebar-border: 229 229 229;
   }
 
   .dark {
-    /* Dark mode — neutral near-black base. Orange accents read warmer
-       against a neutral background than against a blue-tinted one; the
-       previous indigo-tinted dark theme would clash with the new brand. */
-    --color-canvas: 15 15 17;           /* #0f0f11 — neutral near-black */
-    --color-canvas-raised: 20 20 23;
-    --color-surface: 24 24 27;          /* zinc-900-ish */
-    --color-surface-muted: 28 28 32;
-    --color-line: 39 39 43;
-    --color-line-strong: 63 63 70;
-    --color-ink: 250 250 250;
-    --color-ink-muted: 161 161 170;
-    --color-ink-faint: 113 113 122;
-    --sidebar-bg: 20 20 23;
-    --sidebar-border: 39 39 43;
+    /* Dark mode — true black base with neutral-900 cards. Yellow accents
+       pop on the dark background without needing extra glow. */
+    --color-canvas: 5 5 5;              /* #050505 — near-black page */
+    --color-canvas-raised: 10 10 10;    /* neutral-950 */
+    --color-surface: 23 23 23;          /* #171717 — neutral-900 cards */
+    --color-surface-muted: 28 28 28;
+    --color-line: 38 38 38;             /* neutral-800 */
+    --color-line-strong: 64 64 64;      /* neutral-700 */
+    --color-ink: 255 255 255;
+    --color-ink-muted: 163 163 163;     /* neutral-400 */
+    --color-ink-faint: 115 115 115;     /* neutral-500 */
+    --sidebar-bg: 10 10 10;
+    --sidebar-border: 38 38 38;
   }
 
   /* SaaS admin marker class — no forced dark; follows html.dark like the rest of the app */
@@ -66,6 +64,29 @@
   /* Focus ring only for keyboard users */
   *:focus:not(:focus-visible) {
     outline: none;
+  }
+
+  /* ----- Yellow CTA contrast safety -----
+     The brand color is yellow. Existing CTAs in the codebase pair
+     `bg-primary-*` with `text-white`, which on yellow fails WCAG AA
+     contrast. Rather than editing 51+ call sites, repaint `.text-white`
+     to near-black whenever the same element also has a `.bg-primary-*`
+     background. This is a static-class compound selector so it costs
+     nothing at runtime. */
+  .bg-primary-300.text-white,
+  .bg-primary-400.text-white,
+  .bg-primary-500.text-white,
+  .bg-primary-600.text-white,
+  .bg-primary-700.text-white {
+    color: rgb(10 10 10) !important;
+  }
+  /* Disabled-state foreground for the same elements. */
+  .bg-primary-300.text-white:disabled,
+  .bg-primary-400.text-white:disabled,
+  .bg-primary-500.text-white:disabled,
+  .bg-primary-600.text-white:disabled,
+  .bg-primary-700.text-white:disabled {
+    color: rgb(64 64 64) !important;
   }
 }
 

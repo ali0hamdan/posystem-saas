@@ -262,8 +262,8 @@ function Hero() {
         aria-hidden
         className={`pointer-events-none absolute inset-x-0 top-0 h-[44rem] ${
           dark
-            ? 'bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,rgba(249,115,22,0.16),transparent_70%)]'
-            : 'bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,rgba(249,115,22,0.10),transparent_70%)]'
+            ? 'bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,rgba(250,204,21,0.18),transparent_70%)]'
+            : 'bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,rgba(234,179,8,0.10),transparent_70%)]'
         }`}
       />
 
@@ -290,8 +290,8 @@ function Hero() {
         aria-hidden
         className={`pointer-events-none absolute inset-x-0 bottom-0 h-32 ${
           dark
-            ? 'bg-[linear-gradient(180deg,transparent_0%,var(--color-canvas,#0f0f11)_100%)]'
-            : 'bg-[linear-gradient(180deg,transparent_0%,var(--color-canvas,#fffaf5)_100%)]'
+            ? 'bg-[linear-gradient(180deg,transparent_0%,var(--color-canvas,#050505)_100%)]'
+            : 'bg-[linear-gradient(180deg,transparent_0%,var(--color-canvas,#fafafa)_100%)]'
         }`}
       />
 
@@ -1031,7 +1031,7 @@ function FinalCTA() {
         <div
           className={`relative overflow-hidden rounded-3xl border px-8 py-16 text-center sm:px-16 ${dark ? 'border-white/10 bg-white/[0.04]' : 'border-line bg-white/85'}`}
         >
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_120%_at_50%_0%,rgba(249,115,22,0.14),transparent)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_120%_at_50%_0%,rgba(250,204,21,0.14),transparent)]" />
           <div className="relative">
             <h2 className={`text-3xl font-semibold tracking-tight sm:text-4xl ${dark ? 'text-white' : 'text-ink'}`}>
               Start managing your business with Nezhin POS

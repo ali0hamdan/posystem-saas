@@ -121,14 +121,14 @@ function DesktopLifetimeCard({ plan, onSelect }: { plan: PublicPlan; onSelect: (
   ];
 
   return (
-    <div className="relative flex flex-col rounded-2xl border-2 border-amber-400 dark:border-amber-600 bg-surface p-6 shadow-lg shadow-amber-100 dark:shadow-amber-900/20">
-      <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-amber-600 px-4 py-1 text-xs font-semibold text-white">
+    <div className="relative flex flex-col rounded-2xl border-2 border-neutral-900 dark:border-neutral-100 bg-surface p-6 shadow-lg shadow-neutral-900/10 dark:shadow-neutral-100/10">
+      <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-neutral-900 dark:bg-neutral-100 px-4 py-1 text-xs font-semibold text-white dark:text-neutral-900">
         One-time payment
       </span>
 
       <div className="mb-4">
         <div className="flex items-center gap-2">
-          <Monitor className="h-5 w-5 text-amber-500" />
+          <Monitor className="h-5 w-5" />
           <h3 className="text-xl font-bold text-ink">Desktop Lifetime</h3>
         </div>
         <p className="mt-1 text-sm text-ink-muted">
@@ -156,7 +156,7 @@ function DesktopLifetimeCard({ plan, onSelect }: { plan: PublicPlan; onSelect: (
 
       <button
         onClick={onSelect}
-        className="w-full rounded-xl bg-amber-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-amber-700"
+        className="w-full rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-white dark:text-neutral-900 py-3 text-sm font-semibold text-white transition-colors"
       >
         Buy Desktop App
       </button>

@@ -32,7 +32,7 @@ type PingData = {
 
 const STATUS_COLOR: Record<string, string> = {
   ACTIVE: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  LIFETIME: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+  LIFETIME: 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900',
   TRIALING: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
   PAST_DUE: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
   SUSPENDED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
@@ -49,7 +49,7 @@ function ExpiryIndicator({ expiresAt, warning }: { expiresAt?: string | null; wa
   const days = daysUntil(expiresAt);
   if (!expiresAt) {
     return (
-      <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+      <div className="flex items-center gap-2 text-ink">
         <CheckCircle className="h-4 w-4" />
         <span className="text-sm font-medium">Never expires (Lifetime)</span>
       </div>
@@ -248,15 +248,15 @@ export function BillingPage() {
         {canDownload && (
           <Link
             to="/download"
-            className="flex items-center justify-between rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors group"
+            className="flex items-center justify-between rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/50 p-4 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors group"
           >
             <div>
-              <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+              <p className="text-sm font-medium text-ink">
                 {(businessType && DESKTOP_APP_LABEL[businessType]) ?? 'Download Nezhin POS Desktop'}
               </p>
-              <p className="text-xs text-amber-600 dark:text-amber-400">Works offline — included in your plan</p>
+              <p className="text-xs text-ink-muted">Works offline — included in your plan</p>
             </div>
-            <Download className="h-4 w-4 text-amber-500 group-hover:text-amber-700 dark:group-hover:text-amber-300" />
+            <Download className="h-4 w-4 text-ink-muted group-hover:text-ink" />
           </Link>
         )}
       </div>

@@ -26,22 +26,25 @@ export default {
           bg:     'rgb(var(--sidebar-bg) / <alpha-value>)',
           border: 'rgb(var(--sidebar-border) / <alpha-value>)',
         },
-        // Brand: Tailwind `orange` palette. Every existing `bg-primary-*`,
-        // `text-primary-*`, `border-primary-*`, `ring-primary-*` class in the
-        // app keeps working — only the resolved color changes. Use the dark
-        // mode picks from this palette via `dark:bg-primary-400` etc.
+        // Brand: Tailwind `yellow` palette.
+        //
+        // Every existing `bg-primary-*`, `text-primary-*`, `border-primary-*`,
+        // `ring-primary-*` class continues working — only the resolved color
+        // changes. White-on-yellow buttons (`bg-primary-600 text-white`)
+        // would fail contrast, so a global rule in `index.css` repaints
+        // `.text-white` to black whenever it sits on a `.bg-primary-*`.
         primary: {
-          50:  '#fff7ed',
-          100: '#ffedd5',
-          200: '#fed7aa',
-          300: '#fdba74',
-          400: '#fb923c',
-          500: '#f97316',
-          600: '#ea580c',
-          700: '#c2410c',
-          800: '#9a3412',
-          900: '#7c2d12',
-          950: '#431407',
+          50:  '#fefce8',
+          100: '#fef9c3',
+          200: '#fef08a',
+          300: '#fde047',
+          400: '#facc15',  // spec's "primary accent" — bright yellow
+          500: '#eab308',  // spec's "primary hover"  — slightly darker yellow
+          600: '#ca8a04',  // CTA bg in light mode (with black text via override)
+          700: '#a16207',  // hover-of-CTA / text-primary-700 on white reads well
+          800: '#854d0e',
+          900: '#713f12',
+          950: '#422006',
         },
         danger: {
           50:  '#fff1f2',
@@ -77,7 +80,7 @@ export default {
         card:  '0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 6px -1px rgb(0 0 0 / 0.04)',
         soft:  '0 4px 12px -2px rgb(0 0 0 / 0.08)',
         panel: '0 0 0 1px rgb(0 0 0 / 0.04), 0 8px 24px -4px rgb(0 0 0 / 0.08)',
-        glow:  '0 0 0 3px rgb(249 115 22 / 0.25)',
+        glow:  '0 0 0 3px rgb(250 204 21 / 0.35)',
       },
       borderRadius: {
         '4xl': '2rem',

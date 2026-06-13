@@ -58,12 +58,12 @@ export function PaymentSuccessPage() {
           </p>
 
           {isDesktopLifetime && (
-            <div className="mb-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-3 text-sm text-left">
-              <p className="flex items-center gap-2 text-amber-700 dark:text-amber-300 font-medium mb-2">
+            <div className="mb-4 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-300 dark:border-neutral-700 px-4 py-3 text-sm text-left">
+              <p className="flex items-center gap-2 text-ink font-medium mb-2">
                 <Monitor className="h-4 w-4" />
                 One-time desktop license
               </p>
-              <dl className="space-y-1 text-amber-600 dark:text-amber-400">
+              <dl className="space-y-1 text-ink-muted">
                 <div className="flex justify-between gap-4">
                   <dt>Plan</dt>
                   <dd className="font-medium">{plan}</dd>
@@ -83,7 +83,7 @@ export function PaymentSuccessPage() {
                   <dd className="font-medium">One-time payment</dd>
                 </div>
               </dl>
-              <p className="text-xs text-amber-500 dark:text-amber-500 mt-2">
+              <p className="text-xs text-ink-faint mt-2">
                 Unlimited desktop use — download and activate your POS desktop app.
               </p>
             </div>
@@ -128,7 +128,7 @@ export function PaymentSuccessPage() {
             {isDesktopLifetime && (
               <Link
                 to="/download"
-                className="flex items-center justify-center gap-2 w-full rounded-xl bg-amber-600 py-3 text-sm font-semibold text-white hover:bg-amber-700 transition-colors"
+                className="flex items-center justify-center gap-2 w-full rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-white dark:text-neutral-900 py-3 text-sm font-semibold text-white transition-colors"
               >
                 <Download className="h-4 w-4" />
                 Download Desktop App
